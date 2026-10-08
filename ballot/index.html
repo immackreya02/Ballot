@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#C94B36" />
+  <title>BALLOT — Secure Online Voting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#F3EFE7;--ink:#171717;--terra:#C94B36;--olive:#66745C;--mustard:#D8A84E;--white:#FFFCF6;--border:#D6D0C5;--muted:#74736E}
+    *{box-sizing:border-box}html,body,#root{min-height:100%;margin:0}body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif}
+    .fallback{min-height:100vh}.fallback header{height:72px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(20px,5vw,72px)}
+    .logo{font-weight:700;letter-spacing:.08em;display:flex;align-items:center;gap:9px}.mark{width:22px;height:22px;background:var(--terra);color:white;display:grid;place-items:center;border-radius:4px;font-size:12px}
+    .nav{display:flex;gap:26px;font-size:14px}.actions{display:flex;gap:9px}.btn{border:1px solid var(--border);border-radius:10px;padding:11px 16px;background:var(--white);font-weight:700}.primary{background:var(--terra);border-color:var(--terra);color:#fff}
+    .hero{max-width:1240px;margin:auto;padding:90px clamp(20px,5vw,72px);display:grid;grid-template-columns:1.15fr .85fr;gap:70px;align-items:center}.eyebrow{font:11px 'Space Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}h1{font:600 clamp(58px,7vw,108px)/.93 Fraunces,serif;margin:22px 0}.lead{font-size:20px;line-height:1.65;color:var(--muted);max-width:600px}.hero-actions{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap}.features{display:grid;gap:14px;margin-top:38px}.feature{display:flex;gap:12px;align-items:center;font-size:14px}.check{color:var(--olive);font-weight:700}.card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:28px}.poll-title{font:600 34px/1.12 Fraunces,serif;margin:14px 0 25px}.option{border:1px solid var(--border);border-radius:12px;padding:16px;margin:10px 0;background:var(--white)}.notice{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}.strip{border-block:1px solid var(--border);background:var(--white);padding:42px clamp(20px,5vw,72px)}.strip-inner{max-width:1240px;margin:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}.strip h3{font:600 25px Fraunces,serif;margin:8px 0 0}
+    @media(max-width:800px){.nav{display:none}.hero{grid-template-columns:1fr;padding-top:55px}.hero h1{font-size:64px}.strip-inner{grid-template-columns:1fr}.hero{gap:38px}}
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="fallback">
+      <header><div class="logo"><span class="mark">✓</span>BALLOT</div><nav class="nav"><span>How it works</span><span>Transparency</span></nav><div class="actions"><button class="btn">Log in</button><button class="btn primary">Sign up</button></div></header>
+      <main>
+        <section class="hero">
+          <div>
+            <div class="eyebrow">Secure online voting</div>
+            <h1>Vote with<br>confidence.</h1>
+            <p class="lead">A transparent voting platform built on trust. Create polls, cast one authenticated vote per poll, follow live results, and preserve a permanent public record.</p>
+            <div class="hero-actions"><button class="btn primary">Create an account</button><button class="btn">How it works</button></div>
+            <div class="features"><div class="feature"><span class="check">✓</span>One authenticated vote per poll</div><div class="feature"><span class="check">✓</span>Clear participation and result information</div><div class="feature"><span class="check">✓</span>Neutral presentation of every voting option</div></div>
+          </div>
+          <div class="card"><div class="eyebrow">Live example</div><div class="poll-title">Which transport priority should the city fund first?</div><div class="option">Increase public transit funding</div><div class="option">Expand bicycle infrastructure</div><div class="option">Improve road maintenance</div><div class="option">Add pedestrian crossings</div><button class="btn primary" style="width:100%;margin-top:10px">Cast vote</button><div class="notice">One authenticated voter can vote once per poll.</div></div>
+        </section>
+        <section class="strip"><div class="strip-inner"><div><div class="eyebrow">01 / Neutral</div><h3>Every option gets equal visual weight.</h3></div><div><div class="eyebrow">02 / Live</div><h3>Results update without distracting voters.</h3></div><div><div class="eyebrow">03 / Archive</div><h3>Historical polls remain browsable.</h3></div></div></section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="./src/main.jsx"></script>
+</body>
+</html>

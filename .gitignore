@@ -1,0 +1,34 @@
+# Root level gitignore for BALLOT
+
+# Environment variables & secrets (CRITICAL FOR GITHUB SECURITY)
+.env
+.env.*
+*.env
+server/.env
+server/.env.*
+ballot/.env
+ballot/.env.*
+
+# Dependency directories
+node_modules/
+server/node_modules/
+ballot/node_modules/
+
+# Production / Build output
+dist/
+ballot/dist/
+build/
+
+# Temporary scratch & debug logs
+scratch/
+server/scratch/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
