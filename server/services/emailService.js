@@ -5,16 +5,16 @@ const getTransporter = () => {
     const user = process.env.SMTP_USER.trim();
     const pass = process.env.SMTP_PASS.replace(/\s+/g, '');
 
-    // For Gmail, use direct SSL port 465 with explicit connection timeouts
+    // For Gmail, use direct SSL port 465 with robust cloud timeouts
     if (process.env.SMTP_SERVICE === 'gmail' || process.env.SMTP_HOST === 'smtp.gmail.com' || user.endsWith('@gmail.com')) {
       return nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
         auth: { user, pass },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 5000
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
       });
     }
 
@@ -24,9 +24,9 @@ const getTransporter = () => {
         port: Number(process.env.SMTP_PORT) || 587,
         secure: process.env.SMTP_SECURE === 'true',
         auth: { user, pass },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 5000
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
       });
     }
   }
@@ -44,7 +44,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
     try {
       const sendPromise = transporter.sendMail({ from, to, subject, text, html });
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('SMTP send timed out after 6 seconds')), 6000)
+        setTimeout(() => reject(new Error('SMTP send timed out after 15 seconds')), 15000)
       );
 
       const info = await Promise.race([sendPromise, timeoutPromise]);

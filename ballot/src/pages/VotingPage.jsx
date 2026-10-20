@@ -11,7 +11,8 @@ import {
   Clock,
   ShieldCheck,
   BarChart3,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 
 export function VotingPage() {
@@ -27,6 +28,7 @@ export function VotingPage() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [devOtpHint, setDevOtpHint] = useState('');
   const [voterToken, setVoterToken] = useState('');
   const [ballotOptions, setBallotOptions] = useState([]);
   const [selectedOptionId, setSelectedOptionId] = useState(null);
@@ -76,7 +78,11 @@ export function VotingPage() {
         email: email.trim()
       });
       showToast(res.message);
-      setOtp(''); // Always require manual OTP entry from voter
+      const hint = res.otpHint || res.devOtpHint || '';
+      if (hint) {
+        setDevOtpHint(hint);
+      }
+      setOtp('');
       setStep(2);
     } catch (err) {
       if (err.message.includes('already cast your vote')) {

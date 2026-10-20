@@ -75,8 +75,7 @@ exports.register = async (req, res) => {
 
     res.status(201).json({
       message: 'Account created successfully. Please verify your email using the 6-digit OTP sent to your inbox.',
-      email: normalizedEmail,
-      devOtpHint: process.env.NODE_ENV === 'development' ? otp : undefined
+      email: normalizedEmail
     });
   } catch (err) {
     console.error('Registration Error:', err);

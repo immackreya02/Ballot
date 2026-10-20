@@ -170,8 +170,7 @@ exports.checkEligibilityAndSendOTP = async (req, res) => {
     res.json({
       message: 'Verification OTP sent to your email address. Valid for 5 minutes.',
       pollId: poll._id,
-      email: normalizedEmail,
-      devOtpHint: process.env.NODE_ENV === 'development' ? otp : undefined
+      email: normalizedEmail
     });
   } catch (err) {
     console.error('Eligibility & OTP Error:', err);

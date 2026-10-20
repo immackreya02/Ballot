@@ -1,24 +1,34 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { Button, Logo, useToast, RoleBadge } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
-import { CheckCircle2, ShieldCheck, Mail, KeyRound, AlertCircle, User, FileSpreadsheet, Shield } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Mail, KeyRound, AlertCircle, User, FileSpreadsheet, Shield, Sparkles } from 'lucide-react';
 
 export function Auth({ type = 'login' }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useParams();
   const { showToast } = useToast();
   const { login, register, verifyEmail } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [devOtpHint, setDevOtpHint] = useState('');
+  const [devOtpHint, setDevOtpHint] = useState(location.state?.otpHint || '');
   const [verifyState, setVerifyState] = useState('pending');
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.email) {
+      setEmail(location.state.email);
+    }
+    if (location.state?.otpHint) {
+      setDevOtpHint(location.state.otpHint);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -36,10 +46,11 @@ export function Auth({ type = 'login' }) {
       } else if (type === 'signup') {
         const res = await register(name, email, password, confirmPassword, 'organizer');
         showToast(res.message);
-        if (res.devOtpHint) {
-          setDevOtpHint(res.devOtpHint);
+        const hint = res.otpHint || res.devOtpHint || '';
+        if (hint) {
+          setDevOtpHint(hint);
         }
-        navigate('/verify-email', { state: { email } });
+        navigate('/verify-email', { state: { email, otpHint: hint } });
       } else if (type === 'verify') {
         if (code.length < 6) {
           showToast('Please enter full 6-digit verification code', 'error');
