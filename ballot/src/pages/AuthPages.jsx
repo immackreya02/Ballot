@@ -29,6 +29,9 @@ export function Auth({ type = 'login' }) {
       if (type === 'login') {
         const res = await login(email, password);
         showToast(`Welcome back, ${res.user.name}!`);
+        if (selectedRole === 'admin' && res.user.role !== 'admin') {
+          showToast('Signed in to Organizer Workspace.', 'info');
+        }
         if (res.user.role === 'admin') {
           navigate('/app/admin');
         } else {
@@ -60,7 +63,7 @@ export function Auth({ type = 'login' }) {
   };
 
   const titles = {
-    login: ['Sign in to BALLOT', 'Enter your permanent organizer credentials.', 'Sign in'],
+    login: ['Organizer / Admin Login', 'Enter your account credentials to access your workspace.', 'Sign in'],
     signup: ['Create Organizer Account', 'Register to create and manage eligibility-based polls.', 'Create account'],
     forgot: ['Forgot password?', 'Enter your email address to receive password recovery instructions.', 'Send reset link'],
     reset: ['Reset password', 'Enter your new password below.', 'Update password'],
@@ -108,6 +111,20 @@ export function Auth({ type = 'login' }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          {type === 'login' && (
+            <label className="block">
+              <span className="label block mb-1">Login Role / Workspace</span>
+              <select
+                className="field font-medium"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+              >
+                <option value="organizer">Poll Organizer (Create & Manage Polls)</option>
+                <option value="admin">System Administrator (Global Admin Panel)</option>
+              </select>
+            </label>
+          )}
+
           {type === 'signup' && (
             <label className="block">
               <span className="label block mb-1">Full name</span>
@@ -118,20 +135,6 @@ export function Auth({ type = 'login' }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
-            </label>
-          )}
-
-          {type === 'signup' && (
-            <label className="block">
-              <span className="label block mb-1">Account Role</span>
-              <select
-                className="field font-medium"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-              >
-                <option value="organizer">Poll Organizer (Create & manage polls)</option>
-                <option value="admin">System Administrator (Full system management)</option>
-              </select>
             </label>
           )}
 
@@ -187,11 +190,6 @@ export function Auth({ type = 'login' }) {
                 </div>
               ) : (
                 <>
-                  {devOtpHint && (
-                    <div className="rounded-xl border border-olive/30 bg-olive/10 p-3 text-xs text-ink font-mono text-center">
-                      Dev OTP Hint: <b>{devOtpHint}</b>
-                    </div>
-                  )}
                   <label className="block text-center">
                     <span className="label block mb-2">6-digit verification code</span>
                     <input

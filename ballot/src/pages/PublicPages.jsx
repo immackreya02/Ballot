@@ -144,7 +144,7 @@ export function Landing() {
 
               <div className="space-y-3 pt-4">
                 <Button onClick={() => navigate('/login')} className="w-full py-3.5 text-base">
-                  Organizer Sign In →
+                  Organizer / Admin Sign In →
                 </Button>
                 <Button variant="secondary" onClick={() => navigate('/signup')} className="w-full py-3.5 text-base">
                   Create Organizer Account

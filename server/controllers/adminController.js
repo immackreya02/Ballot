@@ -23,6 +23,10 @@ exports.updateUserStatus = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found.' });
 
+    if (user.role === 'admin' || user._id.toString() === req.user._id.toString()) {
+      return res.status(403).json({ message: 'Administrator accounts cannot be suspended or modified.' });
+    }
+
     user.status = status;
     await user.save();
 

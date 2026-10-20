@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { connectDB, disconnectDB } = require('../config/db');
+const { initSuperAdmin } = require('../config/initAdmin');
 
 const User = require('../models/User');
 const VoterGroup = require('../models/VoterGroup');
@@ -19,6 +20,7 @@ async function seedDemoData() {
   console.log('==================================================\n');
 
   await connectDB();
+  await initSuperAdmin();
 
   const demoEmail = 'demo.organizer@ballot.org';
   const demoPassword = 'DemoOrganizer2026!';

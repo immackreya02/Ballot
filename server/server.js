@@ -4,6 +4,7 @@ const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const { connectDB } = require('./config/db');
+const { initSuperAdmin } = require('./config/initAdmin');
 const { getJwtSecret } = require('./middleware/authMiddleware');
 
 const app = express();
@@ -68,6 +69,7 @@ const startServer = async () => {
   // Validate JWT_SECRET on startup
   getJwtSecret();
   await connectDB();
+  await initSuperAdmin();
   server.listen(PORT, () => {
     console.log(`[Server] BALLOT backend running on http://localhost:${PORT}`);
     console.log(`[Server] Allowed CORS origin: ${allowedOrigin}`);

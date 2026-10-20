@@ -15,8 +15,6 @@ const organizerLinks = [
 ];
 
 const adminLinks = [
-  ['/app/polls', 'My Workspace'],
-  ['/app/voter-groups', 'Voter Groups'],
   ['/app/admin', 'Admin Dashboard'],
   ['/app/admin/users', 'Users'],
   ['/app/admin/polls', 'All Polls']
@@ -35,6 +33,7 @@ export function AppLayout() {
   const { user, logout } = useAuth();
 
   const currentRole = user?.role || 'voter';
+  const logoHome = currentRole === 'admin' ? '/app/admin' : '/app/polls';
   const navLinks =
     currentRole === 'admin'
       ? adminLinks
@@ -53,7 +52,7 @@ export function AppLayout() {
         <header className="sticky top-0 z-30 border-b border-line bg-paper/95 backdrop-blur">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-3">
-              <NavLink to="/app/polls" className="flex items-center gap-2">
+              <NavLink to={logoHome} className="flex items-center gap-2">
                 <Logo />
               </NavLink>
 
@@ -81,7 +80,7 @@ export function AppLayout() {
             </div>
 
             <div className="flex items-center gap-3">
-              {(currentRole === 'organizer' || currentRole === 'admin') && (
+              {currentRole === 'organizer' && (
                 <Button onClick={() => nav('/app/polls/create')} className="hidden sm:flex">
                   <Plus size={17} />
                   Create poll
@@ -148,7 +147,7 @@ export function AppLayout() {
               >
                 Profile & Settings
               </NavLink>
-              {(currentRole === 'organizer' || currentRole === 'admin') && (
+              {currentRole === 'organizer' && (
                 <div className="pt-2 border-t border-line">
                   <Button onClick={() => { setOpen(false); nav('/app/polls/create'); }} className="w-full">
                     <Plus size={17} />
@@ -199,7 +198,7 @@ export function MarketingLayout() {
 
             <div className="flex items-center gap-3">
               <Button variant="secondary" onClick={() => nav('/login')}>
-                Organizer Login
+                Organizer / Admin Login
               </Button>
               <Button onClick={() => nav('/signup')}>
                 Host a Poll

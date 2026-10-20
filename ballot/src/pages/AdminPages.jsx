@@ -147,7 +147,8 @@ export function AdminUsers() {
     }
   };
 
-  let filtered = usersList;
+  // Exclude administrator accounts (admins cannot suspend themselves or other admins)
+  let filtered = usersList.filter((u) => u.role !== 'admin');
   if (search.trim()) {
     filtered = filtered.filter(
       (u) =>
@@ -289,6 +290,190 @@ export function AdminPolls() {
   );
 }
 
+export function AdminActivity() {
+  const { showToast } = useToast();
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState('all');
+
+  const loadLogs = async () => {
+    setLoading(true);
+    try {
+      const res = await adminAPI.getAuditLogs();
+      setLogs(res.logs || []);
+    } catch (err) {
+      showToast(err.message || 'Failed to load audit logs', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLogs();
+  }, []);
+
+  const eventTypes = [
+    'all',
+    'ORGANIZER_REGISTER_SUCCESS',
+    'ORGANIZER_LOGIN_SUCCESS',
+    'POLL_CREATED',
+    'ELECTORATE_CREATED',
+    'POLL_PUBLISHED',
+    'OTP_VERIFIED',
+    'VOTE_ACCEPTED',
+    'DUPLICATE_VOTE_REJECTED',
+    'POLL_CLOSED'
+  ];
+
+  const filteredLogs = filterType === 'all' ? logs : logs.filter((l) => l.eventType === filterType);
+
+  return (
+    <section className="space-y-6">
+      <PageHeader eyebrow="System Administration" title="Global System Audit Logs" />
+      <AdminNavigation />
+
+      <div className="card p-4 rounded-xl bg-warm border border-line flex items-center justify-between text-xs text-muted">
+        <div>
+          <b className="text-ink block">Platform Audit Trail:</b>
+          Immutable security activity log monitoring logins, poll publications, electorate locks, and vote acceptances.
+        </div>
+        <Button variant="secondary" className="text-xs" onClick={loadLogs}>
+          Refresh Logs
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-b border-line pb-3">
+        {eventTypes.map((type) => (
+          <button
+            key={type}
+            onClick={() => setFilterType(type)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-colors ${
+              filterType === type
+                ? 'bg-ink text-white font-bold'
+                : 'bg-warm border border-line text-muted hover:text-ink'
+            }`}
+          >
+            {type === 'all' ? 'All Events' : type.replace(/_/g, ' ')}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="card p-8 text-center font-mono">Loading platform activity logs…</div>
+      ) : filteredLogs.length ? (
+        <div className="card p-6 md:p-8 space-y-4">
+          <div className="space-y-4">
+            {filteredLogs.map((log, i) => (
+              <div key={log._id || i} className="flex gap-4 items-start border-b border-line pb-4 last:border-0 last:pb-0">
+                <span className="font-mono text-xs text-terra font-bold bg-paper border border-line px-2.5 py-1 rounded shrink-0">
+                  {new Date(log.timestamp).toLocaleTimeString()}
+                </span>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <b className="font-mono text-xs text-ink">{log.eventType}</b>
+                    <span className="font-mono text-[11px] text-muted">{new Date(log.timestamp).toLocaleDateString()}</span>
+                  </div>
+                  <div className="text-xs text-muted mt-1">
+                    Actor: <span className="text-ink font-mono font-medium">{log.actorEmail || 'System/Anonymous'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <State
+          type="empty"
+          title="No Audit Logs Found"
+          text="System audit events will populate as organizers login and voters cast ballots."
+        />
+      )}
+    </section>
+  );
+}
+
+export function AdminSettings() {
+  const { showToast } = useToast();
+
+  return (
+    <section className="space-y-6">
+      <PageHeader eyebrow="System Administration" title="Platform Settings & System Controls" />
+      <AdminNavigation />
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="card p-6 md:p-8 space-y-4">
+          <div className="flex items-center gap-3 border-b border-line pb-4">
+            <Shield className="text-olive" size={24} />
+            <div>
+              <h2 className="font-serif text-2xl">Security Policies</h2>
+              <p className="text-xs text-muted">Active security parameters and system guards.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between items-center py-2 border-b border-line">
+              <span className="text-muted">OTP Expiry Window</span>
+              <span className="font-mono font-bold text-ink">5 Minutes</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-line">
+              <span className="text-muted">Concurrency Protection</span>
+              <span className="font-mono font-bold text-olive">Atomic MongoDB Lock (Active)</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-line">
+              <span className="text-muted">Rate Limiting</span>
+              <span className="font-mono font-bold text-olive">Express Rate Limit (Active)</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-muted">Secret Ballot Decoupling</span>
+              <span className="font-mono font-bold text-olive">Strict Separation (Active)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-6 md:p-8 space-y-4">
+          <div className="flex items-center gap-3 border-b border-line pb-4">
+            <Users className="text-terra" size={24} />
+            <div>
+              <h2 className="font-serif text-2xl">Super Admin Profile</h2>
+              <p className="text-xs text-muted">System Owner Identity & Privileges.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between items-center py-2 border-b border-line">
+              <span className="text-muted">System Owner Email</span>
+              <span className="font-mono font-bold text-ink">admin@ballot.org</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-line">
+              <span className="text-muted">Account Role</span>
+              <span className="font-mono font-bold text-terra">SUPER_ADMIN</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-muted">Public Admin Signup</span>
+              <span className="font-mono font-bold text-olive">Disabled (Enforced)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card p-6 md:p-8 bg-paper border border-line space-y-4">
+        <h2 className="font-serif text-2xl">System Operational Guidelines</h2>
+        <p className="text-xs text-muted leading-relaxed">
+          The BALLOT platform operates with active atomic concurrency protection and automated audit event logging across all poll environments.
+        </p>
+        <div className="grid gap-3 font-mono text-xs">
+          <div className="bg-warm p-3 rounded-lg border border-line flex justify-between items-center">
+            <span className="text-ink">Database Integrity Engine</span>
+            <span className="text-olive font-bold">MONGODB_ATOMIC_LOCK_ACTIVE</span>
+          </div>
+          <div className="bg-warm p-3 rounded-lg border border-line flex justify-between items-center">
+            <span className="text-ink">Real-time WebSocket Gateway</span>
+            <span className="text-olive font-bold">SOCKET_IO_DISPATCH_READY</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function AdminPollDetail() { return null; }
-export function AdminActivity() { return null; }
-export function AdminSettings() { return null; }

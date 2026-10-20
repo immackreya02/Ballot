@@ -45,7 +45,8 @@ exports.register = async (req, res) => {
     const otpHash = await bcrypt.hash(otp, salt);
     const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry for registration
 
-    const userRole = role === 'admin' ? 'admin' : 'organizer';
+    // Public signup is strictly restricted to organizer role (Super Admin created via env/server init)
+    const userRole = 'organizer';
 
     const newUser = new User({
       name: name.trim(),
