@@ -1,66 +1,74 @@
-# 🗳️ BALLOT — Secure Online Voting & Poll Management System
-
-> **A general-purpose, eligibility-based polling platform featuring passwordless email OTP verification, secret ballot privacy, atomic double-vote prevention, and real-time Socket.io tallies.**
-
----
-
 ## 🌟 Overview
 
-**BALLOT** is a high-trust civic polling system built for organizations, associations, clubs, residential communities, faculty groups, and committees. 
+**BALLOT** is a high-trust digital voting platform designed for universities, student bodies, residential associations, corporate boards, clubs, and governance committees.
 
-Unlike open public survey tools or generic election software, BALLOT operates on a strict security principle:
-> *"Anyone may discover or access the BALLOT portal, but voting in a restricted poll is allowed strictly to the accredited electorate defined by that poll's organizer."*
+Unlike public survey tools that accept anonymous unverified inputs or complex enterprise election software requiring rigid voter account creation, BALLOT operates on a strict yet frictionless security model:
 
----
+> *"Anyone may discover or access the BALLOT portal, but casting a vote in any election is strictly restricted to the pre-accredited electorate list configured by that poll's organizer."*
 
-## 🔒 Core Security & System Architecture
+Voters never need to register accounts or remember passwords. They simply enter their accredited email, receive a one-time verification code (OTP) via Gmail SMTP, and cast an anonymous ballot with atomic double-vote prevention.
 
-BALLOT implements industry-standard cryptographic and database controls to guarantee election integrity:
 
-### 1. Secret Ballot Privacy (Identity-Vote Decoupling)
-- Voter authorizations (`VotingAuthorization` / electorate emails) and cast ballots (`Ballots`) are stored in **two completely decoupled database collections**.
-- No database index, foreign key, or tracking token links a voter's email to their specific candidate selection.
+# 🗳️ BALLOT — Secure Online Voting & Poll Management Platform
 
-### 2. Atomic Concurrency Lock (Zero Duplicate Votes)
-- State transitions enforce one-person-one-vote using MongoDB atomic conditions:
-  ```javascript
-  VotingAuthorization.findOneAndUpdate(
-    { pollId, voterEmail, isUsed: false },
-    { $set: { isUsed: true } }
-  )
-  ```
-- Parallel concurrent requests from the same user result in **exactly 1 accepted vote**, rejecting duplicates with `HTTP 409 Conflict`.
+[![Live Demo](https://img.shields.io/badge/Demo-Live%20on%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://ballot-1syt.onrender.com)
+[![React](https://img.shields.io/badge/React%2018-Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express%205-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![WebSockets](https://img.shields.io/badge/Real--time-Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-### 3. Locked Electorate & Passwordless Email OTP
-- Once an organizer publishes a poll, the electorate list is permanently locked.
-- Voters authenticate via **6-digit time-limited OTP codes** sent to their authorized email (No passwords or account creation needed for voters).
+> **A modern, eligibility-based polling and election system featuring passwordless email OTP verification, cryptographic secret ballot privacy, atomic double-vote prevention, reusable voter groups, and real-time WebSocket tallies.**
 
-### 4. Real-Time Result Synchronization
-- Live vote tallies update in real time via **Socket.io WebSockets**, respecting the organizer's visibility settings (`LIVE`, `AFTER_VOTE`, or `AFTER_CLOSE`).
-
-### 5. Verifiable Audit Trail
-- System state changes (`POLL_CREATED`, `ELECTORATE_LOCKED`, `POLL_PUBLISHED`, `OTP_VERIFIED`, `VOTE_ACCEPTED`, `POLL_CLOSED`) create immutable, time-stamped `AuditEvent` logs.
+🔗 **Live Deployment**: [https://ballot-1syt.onrender.com](https://ballot-1syt.onrender.com)
 
 ---
-
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18, Vite, TailwindCSS, Lucide Icons, React Router v6, Socket.io-client
-- **Backend**: Node.js, Express.js 5, Socket.io
-- **Database**: MongoDB & Mongoose (with `mongodb-memory-server` zero-setup fallback)
-- **Authentication**: JWT (JSON Web Tokens), Bcryptjs, Email OTP
-- **Email Dispatch**: Nodemailer (SMTP with Development Terminal Fallback)
+### Frontend Client
+- **Framework**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
+- **Routing**: [React Router v6](https://reactrouter.com/)
+- **Styling**: [TailwindCSS](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Real-time Client**: [Socket.io Client](https://socket.io/docs/v4/client-api/)
 
-## 📑 System Roles & Workspaces
-
-| Role | Access Level | Workspaces |
-| :--- | :--- | :--- |
-| **Voter** | Passwordless (Email OTP) | Public Homepage (`/`), Voter Portal (`/vote`), Live Results (`/results/:id`) |
-| **Poll Organizer** | Email + Password (JWT) | Poll Creation (`/app/polls/create`), Voter Groups (`/app/voter-groups`), Electorate Lock, Poll Management & Audit Logs (`/app/audit-logs`) |
-| **System Administrator** | Email + Password (JWT Admin) | Admin Dashboard (`/app/admin`), User Management (`/app/admin/users`), Global Poll Oversight (`/app/admin/polls`) |
+### Backend Server
+- **Runtime**: [Node.js](https://nodejs.org/) (v18+)
+- **Server Framework**: [Express 5](https://expressjs.com/)
+- **Database & ODM**: [MongoDB Atlas](https://www.mongodb.com/atlas) with [Mongoose](https://mongoosejs.com/) (with automatic `mongodb-memory-server` local fallback)
+- **WebSockets**: [Socket.io](https://socket.io/)
+- **Security & Tokens**: `bcryptjs`, `jsonwebtoken` (JWT), `express-rate-limit`
+- **Mail Dispatch**: [Nodemailer](https://nodemailer.com/) (Gmail SMTP with local console fallback)
 
 ---
 
-## 📜 License
+## 📂 Project Structure
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+```
+Ballot/
+├── ballot/                      # React 18 + Vite Frontend Application
+│   ├── public/                  # Static assets & icons
+│   ├── src/
+│   │   ├── components/          # Reusable UI components & layouts (AppLayout, MarketingLayout)
+│   │   ├── context/             # Authentication & global application state
+│   │   ├── pages/               # Views (Landing, VotingPage, CreatePoll, Dashboard, Results, Admin)
+│   │   ├── services/            # Axios API clients & Socket.io service
+│   │   ├── index.css            # Tailwind directives & design system tokens
+│   │   └── main.jsx             # React entry point & routing configuration
+│   ├── package.json             # Frontend dependencies & build scripts
+│   ├── tailwind.config.js       # Tailwind design tokens & font configuration
+│   └── vite.config.js           # Vite dev server & proxy settings
+│
+├── server/                      # Express 5 REST API & WebSocket Backend
+│   ├── config/                  # DB connection (Atlas / Memory) & Super Admin initialization
+│   ├── controllers/             # Business logic (auth, voter, poll, group, admin)
+│   ├── middleware/              # JWT authorization, rate limiters, error handlers
+│   ├── models/                  # Mongoose models (User, Poll, VotingAuthorization, Ballot, AuditEvent)
+│   ├── routes/                  # API routes (/api/auth, /api/polls, /api/voter, /api/admin, etc.)
+│   ├── services/                # Nodemailer Gmail SMTP & email template generator
+│   ├── package.json             # Backend dependencies & startup scripts
+│   └── server.js                # Express & Socket.io server bootstrap + static client serving
+│
+├── package.json                 # Unified monorepo orchestration (Render build & start scripts)
+└── README.md                    # Project documentation
+```
