@@ -22,21 +22,55 @@ const getTransporter = () => {
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
+  // 1. If RESEND_API_KEY is available (Render cloud production), send over HTTPS Port 443
+  const resendApiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (resendApiKey) {
+    try {
+      const fromAddress = process.env.RESEND_FROM || 'BALLOT <onboarding@resend.dev>';
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [to],
+          subject,
+          html,
+          text
+        })
+      });
+
+      const resendData = await resendRes.json();
+      if (!resendRes.ok) {
+        throw new Error(resendData.message || JSON.stringify(resendData));
+      }
+
+      console.log(`[Email Service - Resend HTTPS] Sent email to ${to} (ID: ${resendData.id})`);
+      return { success: true, messageId: resendData.id };
+    } catch (resendErr) {
+      console.error(`[Email Service - Resend] Error sending to ${to}:`, resendErr.message);
+      // Fall through to try Nodemailer if configured
+    }
+  }
+
+  // 2. Fallback to Nodemailer SMTP (Localhost or custom SMTP)
   const user = (process.env.SMTP_USER || '').trim();
   const from = process.env.SMTP_FROM || (user ? `"BALLOT Platform" <${user}>` : '"BALLOT Platform" <noreply@ballot.org>');
   const transporter = getTransporter();
 
   if (!transporter) {
-    console.error('[Email Service] Error: SMTP_USER or SMTP_PASS not set in environment!');
-    throw new Error('SMTP credentials (SMTP_USER / SMTP_PASS) not configured on server.');
+    console.error('[Email Service] Error: Neither RESEND_API_KEY nor SMTP credentials configured!');
+    throw new Error('Email credentials not configured on server.');
   }
 
   try {
     const info = await transporter.sendMail({ from, to, subject, text, html });
-    console.log(`[Email Service] Sent email to ${to} (MessageID: ${info.messageId})`);
+    console.log(`[Email Service - SMTP] Sent email to ${to} (MessageID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (err) {
-    console.error(`[Email Service] SMTP error sending to ${to}:`, err.message);
+    console.error(`[Email Service - SMTP] Error sending to ${to}:`, err.message);
     throw err;
   }
 };

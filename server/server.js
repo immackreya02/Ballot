@@ -48,6 +48,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     app: 'BALLOT Secure Polling Server',
+    resendConfigured: !!process.env.RESEND_API_KEY,
     smtpConfigured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
     smtpUser: process.env.SMTP_USER ? process.env.SMTP_USER.replace(/(.{2})(.*)(@.*)/, '$1***$3') : 'NOT_SET',
     timestamp: new Date().toISOString()
