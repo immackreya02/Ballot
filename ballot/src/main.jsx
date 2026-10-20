@@ -19,7 +19,6 @@ import {
   PollResults,
   PollDetails,
   Share,
-  PollParticipants,
   PollActivity,
   ArchiveList,
   ArchivedPoll,
@@ -201,7 +200,6 @@ const App = () => (
 
           {/* Detailed Creator Results & Analytics */}
           <Route path="/app/polls/:id/results" element={<PollResults />} />
-          <Route path="/app/polls/:id/participants" element={<PollParticipants />} />
           <Route path="/app/polls/:id/activity" element={<PollActivity />} />
 
           {/* SYSTEM ADMINISTRATOR ROUTES (Protected by AdminRoute) */}

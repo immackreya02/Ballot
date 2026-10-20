@@ -389,7 +389,6 @@ export function PollManagementNavigation({ pollId }) {
     { to: `/app/polls/${pollId}`, label: 'Overview', end: true },
     ...(user?.role === 'admin' ? [] : [{ to: `/app/polls/${pollId}/share`, label: 'Share' }]),
     { to: `/app/polls/${pollId}/results`, label: 'Live Results' },
-    { to: `/app/polls/${pollId}/participants`, label: 'Participants' },
     ...(user?.role === 'admin' ? [{ to: `/app/polls/${pollId}/activity`, label: 'Audit Timeline' }] : [])
   ];
 

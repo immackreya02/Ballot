@@ -250,9 +250,9 @@ export function PollDetails() {
                 <h3 className="font-serif text-2xl">Voter Turnout & Attendance</h3>
                 <p className="text-xs text-muted">Audited voter participation roster.</p>
               </div>
-              <Link to={`/app/polls/${poll._id}/participants`} className="text-xs font-bold text-terra hover:underline">
-                View all participants ({electorate.length}) →
-              </Link>
+              <span className="text-xs font-mono font-bold text-muted">
+                Total Voters: {electorate.length}
+              </span>
             </div>
 
             {electorate.length > 0 ? (
@@ -293,9 +293,9 @@ export function PollDetails() {
                 ))}
                 {electorate.length > 5 && (
                   <div className="text-center pt-1">
-                    <Link to={`/app/polls/${poll._id}/participants`} className="text-xs font-bold text-muted hover:text-ink underline font-mono">
+                    <span className="text-xs text-muted font-mono">
                       + {electorate.length - 5} more participants
-                    </Link>
+                    </span>
                   </div>
                 )}
               </div>
