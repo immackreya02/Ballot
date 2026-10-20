@@ -11,13 +11,6 @@ Voters never need to register accounts or remember passwords. They simply enter 
 
 # 🗳️ BALLOT — Secure Online Voting & Poll Management Platform
 
-[![Live Demo](https://img.shields.io/badge/Demo-Live%20on%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://ballot-1syt.onrender.com)
-[![React](https://img.shields.io/badge/React%2018-Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-Express%205-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![WebSockets](https://img.shields.io/badge/Real--time-Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-
 > **A modern, eligibility-based polling and election system featuring passwordless email OTP verification, cryptographic secret ballot privacy, atomic double-vote prevention, reusable voter groups, and real-time WebSocket tallies.**
 
 🔗 **Live Deployment**: [https://ballot-1syt.onrender.com](https://ballot-1syt.onrender.com)
