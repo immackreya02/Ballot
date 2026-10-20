@@ -1,22 +1,37 @@
 const nodemailer = require('nodemailer');
 
 const getTransporter = () => {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    if (process.env.SMTP_SERVICE === 'gmail' || process.env.SMTP_HOST === 'smtp.gmail.com') {
+      return nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }
+      });
+    }
+
+    if (process.env.SMTP_HOST) {
+      return nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }
+      });
+    }
   }
   return null;
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
-  const from = process.env.SMTP_FROM || '"BALLOT Platform" <noreply@ballot-voting.org>';
+  const defaultFrom = process.env.SMTP_USER
+    ? `"BALLOT Platform" <${process.env.SMTP_USER}>`
+    : '"BALLOT Platform" <noreply@ballot-voting.org>';
+  const from = process.env.SMTP_FROM || defaultFrom;
   const transporter = getTransporter();
 
   if (transporter) {
