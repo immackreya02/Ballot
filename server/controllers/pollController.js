@@ -361,12 +361,18 @@ exports.publishPoll = async (req, res) => {
       metadata: { totalEligible: electorateDocs.length }
     });
 
-    // Dispatch invitation emails to every eligible voter
+    // Dispatch invitation emails asynchronously in the background so publishing responds immediately
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    for (const doc of electorateDocs) {
-      const inviteUrl = `${baseUrl}/vote?token=${doc.invitationToken}`;
-      await emailService.sendPollInvitation(doc.email, poll.title, poll.organizerName, inviteUrl, poll.pollCode);
-    }
+    (async () => {
+      for (const doc of electorateDocs) {
+        try {
+          const inviteUrl = `${baseUrl}/vote?token=${doc.invitationToken}`;
+          await emailService.sendPollInvitation(doc.email, poll.title, poll.organizerName, inviteUrl, poll.pollCode);
+        } catch (err) {
+          console.error(`[Poll Invitation] Failed sending to ${doc.email}:`, err.message);
+        }
+      }
+    })();
 
     res.json({
       message: `Poll published successfully! Poll Code: ${poll.pollCode}`,
