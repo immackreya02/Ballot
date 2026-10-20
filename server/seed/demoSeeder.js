@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -34,6 +35,10 @@ async function seedDemoData() {
     'morgan.chen@community.org',
     'casey.patel@community.org'
   ];
+
+  if (process.env.SMTP_USER && !eligibleEmails.includes(process.env.SMTP_USER.toLowerCase().trim())) {
+    eligibleEmails.push(process.env.SMTP_USER.toLowerCase().trim());
+  }
 
   const tokensToClean = eligibleEmails.map((email) => 
     crypto.createHash('sha256').update(`${email}-${demoPollCode}`).digest('hex').substring(0, 32)

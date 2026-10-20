@@ -6,6 +6,7 @@
   "scripts": {
     "build": "npm install --prefix server && npm install --prefix ballot --include=dev && npm run build --prefix ballot",
     "start": "node server/server.js",
-    "dev": "npx -y concurrently \"npm start --prefix server\" \"npm run dev --prefix ballot\""
+    "dev": "npx -y concurrently \"npm start --prefix server\" \"npm run dev --prefix ballot\"",
+    "db:reset": "node server/seed/fullReset.js"
   }
 }

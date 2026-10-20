@@ -9,15 +9,20 @@ const connectDB = async () => {
     // Set strictQuery to true or false explicitly
     mongoose.set('strictQuery', false);
 
-    // Try connecting to local MongoDB with short timeout
+    // Try connecting to configured MongoDB (Atlas or local)
     try {
+      const isAtlas = mongoUri.includes('mongodb+srv') || mongoUri.includes('@');
       await mongoose.connect(mongoUri, {
-        serverSelectionTimeoutMS: 2000
+        serverSelectionTimeoutMS: isAtlas ? 10000 : 2500
       });
-      console.log(`[Database] Connected to local MongoDB at ${mongoUri}`);
+      const maskedUri = mongoUri.replace(/:([^:@]+)@/, ':****@');
+      console.log(`[Database] Connected to MongoDB at ${maskedUri}`);
       return;
     } catch (localErr) {
-      console.log('[Database] Local MongoDB not reachable. Falling back to MongoMemoryServer for zero-setup execution...');
+      if (process.env.MONGODB_URI) {
+        console.error('[Database] Failed connecting to MONGODB_URI:', localErr.message);
+      }
+      console.log('[Database] MongoDB not reachable. Falling back to MongoMemoryServer for zero-setup execution...');
     }
 
     // Fallback: Start MongoDB Memory Server automatically
