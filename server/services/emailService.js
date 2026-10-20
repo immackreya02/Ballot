@@ -2,13 +2,19 @@ const nodemailer = require('nodemailer');
 
 const getTransporter = () => {
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-    if (process.env.SMTP_SERVICE === 'gmail' || process.env.SMTP_HOST === 'smtp.gmail.com') {
+    const user = process.env.SMTP_USER.trim();
+    const pass = process.env.SMTP_PASS.replace(/\s+/g, '');
+
+    // For Gmail, use direct SSL port 465 with explicit connection timeouts
+    if (process.env.SMTP_SERVICE === 'gmail' || process.env.SMTP_HOST === 'smtp.gmail.com' || user.endsWith('@gmail.com')) {
       return nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: { user, pass },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000
       });
     }
 
@@ -17,10 +23,10 @@ const getTransporter = () => {
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT) || 587,
         secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
+        auth: { user, pass },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000
       });
     }
   }
@@ -29,14 +35,19 @@ const getTransporter = () => {
 
 const sendEmail = async ({ to, subject, html, text }) => {
   const defaultFrom = process.env.SMTP_USER
-    ? `"BALLOT Platform" <${process.env.SMTP_USER}>`
+    ? `"BALLOT Platform" <${process.env.SMTP_USER.trim()}>`
     : '"BALLOT Platform" <noreply@ballot-voting.org>';
   const from = process.env.SMTP_FROM || defaultFrom;
   const transporter = getTransporter();
 
   if (transporter) {
     try {
-      const info = await transporter.sendMail({ from, to, subject, text, html });
+      const sendPromise = transporter.sendMail({ from, to, subject, text, html });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SMTP send timed out after 6 seconds')), 6000)
+      );
+
+      const info = await Promise.race([sendPromise, timeoutPromise]);
       console.log(`[Email Service] Sent email to ${to} (MessageID: ${info.messageId})`);
       return { success: true, messageId: info.messageId };
     } catch (err) {
@@ -44,14 +55,12 @@ const sendEmail = async ({ to, subject, html, text }) => {
     }
   }
 
-  // Fallback dev console output when running without SMTP configured or in dev mode
-  if (process.env.NODE_ENV === 'development' || !transporter) {
-    console.log(`\n==================================================`);
-    console.log(`[DEV EMAIL DISPATCH] To: ${to}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Text Body:\n${text}`);
-    console.log(`==================================================\n`);
-  }
+  // Fallback console log when SMTP times out or is unconfigured
+  console.log(`\n==================================================`);
+  console.log(`[EMAIL DISPATCH NOTICE] To: ${to}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Text Body:\n${text}`);
+  console.log(`==================================================\n`);
 
   return { success: true, devMode: true };
 };
