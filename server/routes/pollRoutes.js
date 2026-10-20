@@ -7,6 +7,8 @@ router.use(verifyToken, requireOrganizer);
 
 router.post('/', pollController.createPoll);
 router.get('/', pollController.getOrganizerPolls);
+router.get('/audit-logs', pollController.getOrganizerAuditLogs);
+router.get('/:id/audit-logs', pollController.getPollAuditLogs);
 router.get('/:id', pollController.getPollById);
 router.put('/:id', pollController.updatePoll);
 router.post('/:id/publish', pollController.publishPoll);

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { pollAPI, voterGroupAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Button, PageHeader, ConfirmModal, useToast } from '../components/UI';
+import { parseAndValidateEmailInput } from '../services/emailValidator';
 import {
   Plus,
   Trash2,
@@ -12,6 +13,7 @@ import {
   LockKeyhole,
   Eye,
   CheckCircle2,
+  AlertTriangle,
   Save,
   Users,
   FileSpreadsheet
@@ -122,14 +124,16 @@ export function CreatePoll({ edit = false }) {
     setOptions(updated);
   };
 
+  const emailAnalysis = useMemo(() => {
+    return parseAndValidateEmailInput(specificEmails);
+  }, [specificEmails]);
+
   const calculatePreviewCount = () => {
     if (electorateSourceType === 'GROUP') {
       const selected = voterGroups.find((g) => g._id === voterGroupId);
       return selected && selected.emails ? selected.emails.length : 0;
     }
-    return specificEmails
-      ? [...new Set(specificEmails.split(/[\n,;]/).map((e) => e.trim().toLowerCase()).filter((e) => e.includes('@')))].length
-      : 0;
+    return emailAnalysis.totalCount;
   };
 
   const handleSaveDraft = async () => {
@@ -152,7 +156,7 @@ export function CreatePoll({ edit = false }) {
         resultVisibility,
         electorateSourceType,
         voterGroupId: electorateSourceType === 'GROUP' ? voterGroupId : undefined,
-        specificEmails: electorateSourceType === 'SPECIFIC' ? specificEmails : undefined
+        specificEmails: electorateSourceType === 'SPECIFIC' ? emailAnalysis.valid.join('\n') : undefined
       };
 
       if (isEdit) {
@@ -182,8 +186,15 @@ export function CreatePoll({ edit = false }) {
       return;
     }
 
+    if (electorateSourceType === 'SPECIFIC' && emailAnalysis.valid.length === 0) {
+      showToast('Please provide at least one valid voter email address', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
+      const sanitizedEmails = electorateSourceType === 'SPECIFIC' ? emailAnalysis.valid.join('\n') : undefined;
+
       const payload = {
         title: question.trim(),
         description: description.trim(),
@@ -191,7 +202,7 @@ export function CreatePoll({ edit = false }) {
         resultVisibility,
         electorateSourceType,
         voterGroupId: electorateSourceType === 'GROUP' ? voterGroupId : undefined,
-        specificEmails: electorateSourceType === 'SPECIFIC' ? specificEmails : undefined
+        specificEmails: sanitizedEmails
       };
 
       let targetPollId = id;
@@ -204,7 +215,7 @@ export function CreatePoll({ edit = false }) {
 
       // Publish draft (locks electorate & generates pollCode)
       const pubRes = await pollAPI.publish(targetPollId, {
-        specificEmails: electorateSourceType === 'SPECIFIC' ? specificEmails : undefined
+        specificEmails: sanitizedEmails
       });
 
       setModal(false);
@@ -372,13 +383,77 @@ export function CreatePoll({ edit = false }) {
               </div>
             ) : (
               <div>
-                <label className="label block mb-1">Paste Eligible Voter Emails</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="label">Paste Eligible Voter Emails</label>
+                  <span className="font-mono text-xs text-muted">
+                    {emailAnalysis.totalCount} valid unique email{emailAnalysis.totalCount === 1 ? '' : 's'}
+                  </span>
+                </div>
                 <textarea
                   className="field font-mono text-xs min-h-28"
-                  placeholder="Paste eligible email addresses separated by line breaks or commas…&#10;person1@gmail.com&#10;person2@gmail.com"
+                  placeholder="Paste eligible email addresses separated by line breaks, commas, or spaces…&#10;person1@gmail.com&#10;person2@gmail.com"
                   value={specificEmails}
                   onChange={(e) => setSpecificEmails(e.target.value)}
                 />
+
+                {specificEmails.trim() && (
+                  <div className="mt-3 space-y-2 animate-in fade-in">
+                    {/* Live Validation Analysis Summary */}
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-muted">Live Parser Analysis:</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-olive font-bold flex items-center gap-1">
+                          <CheckCircle2 size={13} /> {emailAnalysis.valid.length} Valid
+                        </span>
+                        {emailAnalysis.invalid.length > 0 && (
+                          <span className="text-terra font-bold flex items-center gap-1">
+                            <AlertTriangle size={13} /> {emailAnalysis.invalid.length} Malformed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Warning Banner for Malformed Entries */}
+                    {emailAnalysis.invalid.length > 0 && (
+                      <div className="rounded-xl border border-terra/30 bg-terra/10 p-3 text-xs text-terra space-y-1.5">
+                        <div className="font-bold flex items-center gap-1.5">
+                          <AlertTriangle size={14} className="shrink-0" />
+                          <span>Malformed email syntax detected (will be ignored):</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {emailAnalysis.invalid.map((bad, i) => (
+                            <span
+                              key={i}
+                              className="font-mono bg-paper border border-terra/30 text-terra px-2 py-0.5 rounded text-[11px]"
+                            >
+                              {bad}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Valid Email Chips Preview */}
+                    {emailAnalysis.valid.length > 0 && (
+                      <div className="rounded-xl border border-line bg-paper p-3 text-xs space-y-1.5">
+                        <div className="text-[11px] font-mono text-muted uppercase font-bold flex justify-between">
+                          <span>Verified Electorate Preview ({emailAnalysis.valid.length}):</span>
+                          <span className="text-olive text-[10px] font-mono">Auto-Separated &amp; Deduplicated</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1">
+                          {emailAnalysis.valid.map((validEmail, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 rounded-full border border-olive/30 bg-olive/10 px-2.5 py-0.5 font-mono text-[11px] text-olive font-medium"
+                            >
+                              <CheckCircle2 size={11} /> {validEmail}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

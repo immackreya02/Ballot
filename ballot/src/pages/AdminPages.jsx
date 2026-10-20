@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, Navigate } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import {
   Button,
@@ -99,10 +99,10 @@ export function AdminDashboard() {
         </div>
 
         <aside className="card p-6 space-y-5">
-          <h2 className="font-serif text-2xl">System Operational Status</h2>
+          <h2 className="font-serif text-2xl">Platform Health</h2>
           <div className="rounded-xl border border-line bg-paper p-4 text-xs text-muted space-y-2">
-            <b className="text-ink block font-semibold">MongoDB Backend Status</b>
-            <p>All security endpoints operational. Atomic single-vote locks active.</p>
+            <b className="text-ink block font-semibold">Core Services Status</b>
+            <p>All voting verification, security policies, and ballot counters are operational.</p>
           </div>
         </aside>
       </div>
@@ -393,87 +393,7 @@ export function AdminActivity() {
 }
 
 export function AdminSettings() {
-  const { showToast } = useToast();
-
-  return (
-    <section className="space-y-6">
-      <PageHeader eyebrow="System Administration" title="Platform Settings & System Controls" />
-      <AdminNavigation />
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="card p-6 md:p-8 space-y-4">
-          <div className="flex items-center gap-3 border-b border-line pb-4">
-            <Shield className="text-olive" size={24} />
-            <div>
-              <h2 className="font-serif text-2xl">Security Policies</h2>
-              <p className="text-xs text-muted">Active security parameters and system guards.</p>
-            </div>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center py-2 border-b border-line">
-              <span className="text-muted">OTP Expiry Window</span>
-              <span className="font-mono font-bold text-ink">5 Minutes</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-line">
-              <span className="text-muted">Concurrency Protection</span>
-              <span className="font-mono font-bold text-olive">Atomic MongoDB Lock (Active)</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-line">
-              <span className="text-muted">Rate Limiting</span>
-              <span className="font-mono font-bold text-olive">Express Rate Limit (Active)</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-muted">Secret Ballot Decoupling</span>
-              <span className="font-mono font-bold text-olive">Strict Separation (Active)</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-6 md:p-8 space-y-4">
-          <div className="flex items-center gap-3 border-b border-line pb-4">
-            <Users className="text-terra" size={24} />
-            <div>
-              <h2 className="font-serif text-2xl">Super Admin Profile</h2>
-              <p className="text-xs text-muted">System Owner Identity & Privileges.</p>
-            </div>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center py-2 border-b border-line">
-              <span className="text-muted">System Owner Email</span>
-              <span className="font-mono font-bold text-ink">admin@ballot.org</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-line">
-              <span className="text-muted">Account Role</span>
-              <span className="font-mono font-bold text-terra">SUPER_ADMIN</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-muted">Public Admin Signup</span>
-              <span className="font-mono font-bold text-olive">Disabled (Enforced)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="card p-6 md:p-8 bg-paper border border-line space-y-4">
-        <h2 className="font-serif text-2xl">System Operational Guidelines</h2>
-        <p className="text-xs text-muted leading-relaxed">
-          The BALLOT platform operates with active atomic concurrency protection and automated audit event logging across all poll environments.
-        </p>
-        <div className="grid gap-3 font-mono text-xs">
-          <div className="bg-warm p-3 rounded-lg border border-line flex justify-between items-center">
-            <span className="text-ink">Database Integrity Engine</span>
-            <span className="text-olive font-bold">MONGODB_ATOMIC_LOCK_ACTIVE</span>
-          </div>
-          <div className="bg-warm p-3 rounded-lg border border-line flex justify-between items-center">
-            <span className="text-ink">Real-time WebSocket Gateway</span>
-            <span className="text-olive font-bold">SOCKET_IO_DISPATCH_READY</span>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+  return <Navigate to="/app/admin" replace />;
 }
 
 export function AdminPollDetail() { return null; }

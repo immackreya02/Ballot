@@ -1,18 +1,26 @@
 const VoterGroup = require('../models/VoterGroup');
 const AuditEvent = require('../models/AuditEvent');
 
-// Helper to normalize and deduplicate email list
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+// Helper to normalize, smart-split, validate, and deduplicate email list
 const normalizeEmailList = (emails) => {
-  if (!Array.isArray(emails)) {
-    if (typeof emails === 'string') {
-      emails = emails.split(/[\n,;]/);
-    } else {
-      return [];
-    }
-  }
-  const clean = emails
-    .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
-    .filter((e) => e.length > 0 && e.includes('@'));
+  if (!emails) return [];
+  let rawStr = Array.isArray(emails) ? emails.join('\n') : String(emails);
+
+  // 1. Smart TLD auto-split when domain is immediately glued to another address
+  rawStr = rawStr.replace(
+    /(\.(?:com|org|edu|in|net|gov|io|co|ac|me|info|biz))([a-zA-Z0-9._%+-]+@)/gi,
+    (match, g1, g2) => `${g1}\n${g2}`
+  );
+
+  // 2. Split on newlines, commas, semicolons, tabs, and spaces
+  const tokens = rawStr.split(/[\r\n,;\s]+/);
+
+  const clean = tokens
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0 && EMAIL_REGEX.test(e));
+
   return [...new Set(clean)];
 };
 

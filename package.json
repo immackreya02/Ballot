@@ -1,0 +1,12 @@
+{
+  "name": "ballot-secure-voting-system",
+  "version": "1.0.0",
+  "description": "Secure, eligibility-based online voting platform",
+  "main": "server/server.js",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix ballot",
+    "build": "npm run build --prefix ballot",
+    "start": "node server/server.js",
+    "dev": "npx -y concurrently \"npm start --prefix server\" \"npm run dev --prefix ballot\""
+  }
+}

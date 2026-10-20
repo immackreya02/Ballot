@@ -14,7 +14,6 @@ export function Auth({ type = 'login' }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [selectedRole, setSelectedRole] = useState('organizer');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [devOtpHint, setDevOtpHint] = useState('');
@@ -29,16 +28,13 @@ export function Auth({ type = 'login' }) {
       if (type === 'login') {
         const res = await login(email, password);
         showToast(`Welcome back, ${res.user.name}!`);
-        if (selectedRole === 'admin' && res.user.role !== 'admin') {
-          showToast('Signed in to Organizer Workspace.', 'info');
-        }
         if (res.user.role === 'admin') {
           navigate('/app/admin');
         } else {
           navigate('/app/polls');
         }
       } else if (type === 'signup') {
-        const res = await register(name, email, password, confirmPassword, selectedRole);
+        const res = await register(name, email, password, confirmPassword, 'organizer');
         showToast(res.message);
         if (res.devOtpHint) {
           setDevOtpHint(res.devOtpHint);
@@ -111,20 +107,6 @@ export function Auth({ type = 'login' }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          {type === 'login' && (
-            <label className="block">
-              <span className="label block mb-1">Login Role / Workspace</span>
-              <select
-                className="field font-medium"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-              >
-                <option value="organizer">Poll Organizer (Create & Manage Polls)</option>
-                <option value="admin">System Administrator (Global Admin Panel)</option>
-              </select>
-            </label>
-          )}
-
           {type === 'signup' && (
             <label className="block">
               <span className="label block mb-1">Full name</span>

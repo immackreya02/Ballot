@@ -46,7 +46,14 @@ exports.updateUserStatus = async (req, res) => {
 exports.getAllPolls = async (req, res) => {
   try {
     const polls = await Poll.find().sort({ createdAt: -1 });
-    res.json({ polls });
+    const formatted = polls.map((p) => {
+      const totalVotes = p.options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
+      return {
+        ...p.toObject(),
+        totalVotes
+      };
+    });
+    res.json({ polls: formatted });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch system polls.', error: err.message });
   }

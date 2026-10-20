@@ -19,7 +19,7 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
-import { Download, ShieldCheck, Activity } from 'lucide-react';
+import { Download, ShieldCheck, Activity, CheckCircle2, Clock, Users } from 'lucide-react';
 
 const PALETTE = ['#171717', '#C94B36', '#66745C', '#D8A84E'];
 
@@ -44,7 +44,8 @@ export function PollResults({ closed = false }) {
     loadResults();
 
     // Socket.io Real-Time Results Connection
-    const socket = io('http://localhost:5000');
+    const socketHost = import.meta.env.VITE_SOCKET_URL || (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    const socket = io(socketHost);
     socket.emit('join-poll', id);
 
     socket.on('vote-updated', (data) => {
@@ -207,8 +208,8 @@ export function PollParticipants() {
   }
 
   const totalEligible = poll?.totalEligibleCount || electorate.length || 0;
-  const totalVoted = poll?.totalVotes || 0;
-  const turnOutPct = totalEligible > 0 ? ((totalVoted / totalEligible) * 100).toFixed(1) : 0;
+  const actualVotedCount = electorate.filter((e) => e.hasVoted).length || poll?.totalVotes || 0;
+  const turnOutPct = totalEligible > 0 ? ((actualVotedCount / totalEligible) * 100).toFixed(1) : 0;
 
   return (
     <section className="mx-auto max-w-5xl py-4 space-y-6">
@@ -217,7 +218,7 @@ export function PollParticipants() {
       <div className="card p-6 md:p-8 space-y-4">
         <h1 className="font-serif text-3xl">Participant Privacy Protection</h1>
         <p className="text-muted text-sm leading-relaxed">
-          BALLOT maintains strict cryptographic separation between <b>VotingAuthorization</b> records and <b>anonymous Ballot storage</b>. Individual voter identities cannot be correlated with candidate option selections.
+          BALLOT maintains strict cryptographic separation between <b>voter authorization</b> and <b>anonymous ballots</b>. Organizers can verify <i>who participated</i> (turnout), but individual ballot choices remain 100% secret.
         </p>
       </div>
 
@@ -225,10 +226,10 @@ export function PollParticipants() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-line pb-4">
           <div>
             <h2 className="font-serif text-2xl">Electorate Delegates & Participation</h2>
-            <p className="text-xs text-muted">Real-time voting status tracking for locked poll electorate.</p>
+            <p className="text-xs text-muted">Real-time attendance tracking for verified participants.</p>
           </div>
           <div className="font-mono text-sm bg-warm border border-line px-3 py-1.5 rounded-lg">
-            Turnout: <b className="text-ink">{totalVoted} / {totalEligible}</b> ({turnOutPct}%)
+            Turnout: <b className="text-ink">{actualVotedCount} / {totalEligible}</b> ({turnOutPct}%)
           </div>
         </div>
 
@@ -240,26 +241,45 @@ export function PollParticipants() {
                 className="flex items-center justify-between p-4 rounded-xl border border-line bg-paper hover:border-ink/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="grid h-8 w-8 place-items-center rounded-full bg-warm text-ink font-mono text-xs font-bold border border-line">
+                  <div
+                    className={`grid h-8 w-8 place-items-center rounded-full font-mono text-xs font-bold border ${
+                      entry.hasVoted
+                        ? 'bg-olive/20 text-olive border-olive/30'
+                        : 'bg-warm text-muted border-line'
+                    }`}
+                  >
                     {entry.email.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <span className="font-mono text-sm font-bold text-ink block">{entry.email}</span>
-                    <span className="text-[11px] text-muted">Invited: {new Date(entry.invitedAt || Date.now()).toLocaleDateString()}</span>
+                    <span className="text-[11px] text-muted">
+                      {entry.hasVoted && entry.votedAt
+                        ? `Ballot recorded on ${new Date(entry.votedAt).toLocaleString()}`
+                        : `Invited: ${new Date(entry.invitedAt || Date.now()).toLocaleDateString()}`}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono bg-olive/15 text-olive border border-olive/30">
-                    <CheckCircle2 size={14} /> Registered Delegate
-                  </span>
+                  {entry.hasVoted ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono bg-olive/15 text-olive border border-olive/30">
+                      <CheckCircle2 size={14} /> Voted
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono bg-warm text-muted border border-line">
+                      <Clock size={14} /> Pending
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted font-mono text-sm">
-            No specific electorate list associated with this poll draft.
+          <div className="text-center py-10 text-muted font-mono text-sm space-y-1">
+            <p>No participant records yet.</p>
+            <p className="text-xs text-muted/70">
+              As voters verify their emails and cast their ballots, their turnout status will appear here.
+            </p>
           </div>
         )}
       </div>
@@ -303,19 +323,48 @@ export function PollActivity() {
           <div className="text-center py-8 font-mono text-sm text-muted">Loading poll activity timeline…</div>
         ) : logs.length > 0 ? (
           <div className="space-y-4">
-            {logs.map((log, index) => (
-              <div key={log._id || index} className="flex items-start gap-4 pb-4 border-b border-line last:border-0">
-                <span className="font-mono text-xs font-bold bg-paper border border-line px-2.5 py-1 rounded text-terra shrink-0">
-                  {new Date(log.timestamp).toLocaleTimeString()}
-                </span>
-                <div>
-                  <b className="font-mono text-xs text-ink block">{log.eventType}</b>
-                  <p className="text-xs text-muted mt-0.5">
-                    Actor: <span className="font-mono text-ink">{log.actorEmail || 'System/Anonymous'}</span>
-                  </p>
+            {logs.map((log, index) => {
+              const isVote = log.eventType === 'VOTE_ACCEPTED';
+              const isOtp = log.eventType.startsWith('OTP');
+              const isPublish = log.eventType === 'POLL_PUBLISHED';
+              const isClosed = log.eventType === 'POLL_CLOSED';
+
+              const badgeColor = isVote || log.eventType === 'OTP_VERIFIED'
+                ? 'bg-olive/15 text-olive border-olive/30'
+                : isPublish
+                ? 'bg-terra/15 text-terra border-terra/30'
+                : isClosed
+                ? 'bg-ink/10 text-ink border-line'
+                : 'bg-warm text-muted border-line';
+
+              return (
+                <div key={log._id || index} className="flex items-start gap-4 pb-4 border-b border-line last:border-0">
+                  <div className="flex flex-col items-center shrink-0">
+                    <span className="font-mono text-xs font-bold bg-paper border border-line px-2.5 py-1 rounded text-ink shadow-2xs">
+                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                    <span className="font-mono text-[10px] text-muted mt-1">
+                      {new Date(log.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-xs font-bold border ${badgeColor}`}>
+                        {log.eventType}
+                      </span>
+                      {log.metadata?.ballotId && (
+                        <span className="font-mono text-[11px] text-muted bg-paper border border-line px-2 py-0.5 rounded">
+                          Receipt: {String(log.metadata.ballotId).slice(-8)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted mt-1.5">
+                      Actor: <span className="font-mono font-medium text-ink">{log.actorEmail || 'System/Anonymous'}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-xl border border-line bg-warm p-6 text-center text-xs text-muted font-mono">

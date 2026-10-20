@@ -127,7 +127,13 @@ export const PageHeader = ({ eyebrow, title, children }) => (
 export function PollCard({ poll, onOpen }) {
   const { user } = useAuth();
   const isVoter = user?.role === 'voter';
-  const leader = [...poll.options].sort((a, b) => b[1] - a[1])[0] || ['No options', 0];
+  const hasVotes = Boolean(poll.votes && poll.votes > 0);
+  const leader = hasVotes && poll.options?.length
+    ? [...poll.options].sort((a, b) => b[1] - a[1])[0]
+    : null;
+  const leaderPct = hasVotes && leader
+    ? Math.round((leader[1] / poll.votes) * 100)
+    : 0;
 
   const actionText = isVoter
     ? poll.hasVoted || poll.status === 'CLOSED'
@@ -136,6 +142,13 @@ export function PollCard({ poll, onOpen }) {
     : poll.status === 'DRAFT'
     ? 'Continue editing'
     : 'Manage poll';
+
+  const statusLabel =
+    poll.status === 'CLOSED'
+      ? 'Concluded'
+      : poll.status === 'DRAFT'
+      ? 'Draft'
+      : 'Live voting';
 
   return (
     <article className="card p-5 flex flex-col justify-between transition-all hover:border-ink/40">
@@ -162,20 +175,29 @@ export function PollCard({ poll, onOpen }) {
       </div>
       <div>
         <div className="border-t border-line pt-3.5 text-sm">
-          <div className="mb-2 flex justify-between">
-            <span className="text-muted text-xs">Leading choice</span>
-            <span className="font-medium text-ink truncate max-w-[200px] text-xs">{leader[0]}</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-paper">
-            <div
-              className="h-full bg-ink transition-all duration-500"
-              style={{ width: `${leader[1]}%` }}
-            />
-          </div>
-          <div className="mt-2 flex justify-between font-mono text-xs text-muted">
-            <span>{leader[1]}%</span>
-            <span>{poll.closes}</span>
-          </div>
+          {hasVotes && leader ? (
+            <>
+              <div className="mb-2 flex justify-between">
+                <span className="text-muted text-xs">Leading choice</span>
+                <span className="font-medium text-ink truncate max-w-[200px] text-xs">{leader[0]}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-paper">
+                <div
+                  className="h-full bg-ink transition-all duration-500"
+                  style={{ width: `${leaderPct}%` }}
+                />
+              </div>
+              <div className="mt-2 flex justify-between font-mono text-xs text-muted">
+                <span>{leaderPct}% ({leader[1]} {leader[1] === 1 ? 'vote' : 'votes'})</span>
+                <span>{statusLabel}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-between font-mono text-xs text-muted py-1">
+              <span>{poll.status === 'CLOSED' ? 'Closed with 0 votes' : 'Awaiting first vote'}</span>
+              <span>{statusLabel}</span>
+            </div>
+          )}
         </div>
         <button
           onClick={onOpen}
@@ -365,10 +387,10 @@ export function PollManagementNavigation({ pollId }) {
 
   const items = [
     { to: `/app/polls/${pollId}`, label: 'Overview', end: true },
-    { to: `/app/polls/${pollId}/share`, label: 'Share' },
+    ...(user?.role === 'admin' ? [] : [{ to: `/app/polls/${pollId}/share`, label: 'Share' }]),
     { to: `/app/polls/${pollId}/results`, label: 'Live Results' },
     { to: `/app/polls/${pollId}/participants`, label: 'Participants' },
-    { to: `/app/polls/${pollId}/activity`, label: 'Audit Timeline' }
+    ...(user?.role === 'admin' ? [{ to: `/app/polls/${pollId}/activity`, label: 'Audit Timeline' }] : [])
   ];
 
   return (
@@ -398,8 +420,7 @@ export function AdminNavigation() {
     { to: '/app/admin', label: 'Overview', end: true },
     { to: '/app/admin/users', label: 'User Management' },
     { to: '/app/admin/polls', label: 'System Polls' },
-    { to: '/app/admin/activity', label: 'System Activity' },
-    { to: '/app/admin/settings', label: 'Admin Settings' }
+    { to: '/app/admin/activity', label: 'System Activity' }
   ];
 
   return (

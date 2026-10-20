@@ -10,8 +10,7 @@ const voterLinks = [
 
 const organizerLinks = [
   ['/app/polls', 'My Polls'],
-  ['/app/voter-groups', 'Voter Groups'],
-  ['/app/audit-logs', 'Audit Logs']
+  ['/app/voter-groups', 'Voter Groups']
 ];
 
 const adminLinks = [

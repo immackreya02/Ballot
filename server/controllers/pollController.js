@@ -4,6 +4,7 @@ const ElectorateEntry = require('../models/ElectorateEntry');
 const VoterGroup = require('../models/VoterGroup');
 const AuditEvent = require('../models/AuditEvent');
 const Ballot = require('../models/Ballot');
+const VotingAuthorization = require('../models/VotingAuthorization');
 const emailService = require('../services/emailService');
 const { normalizeEmailList } = require('./groupController');
 
@@ -120,7 +121,14 @@ exports.createPoll = async (req, res) => {
 exports.getOrganizerPolls = async (req, res) => {
   try {
     const polls = await Poll.find({ organizerId: req.user._id }).sort({ createdAt: -1 });
-    res.json({ polls });
+    const formatted = polls.map((p) => {
+      const totalVotes = p.options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
+      return {
+        ...p.toObject(),
+        totalVotes
+      };
+    });
+    res.json({ polls: formatted });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch polls.', error: err.message });
   }
@@ -157,15 +165,57 @@ exports.getPollById = async (req, res) => {
       voteCount: countMap[opt._id.toString()] || 0
     }));
 
-    const electorateEntries = await ElectorateEntry.find({ pollId: poll._id }).select('email status invitedAt invitationToken');
+    const [electorateEntries, authorizations] = await Promise.all([
+      ElectorateEntry.find({ pollId: poll._id }).select('email invitedAt invitationToken'),
+      VotingAuthorization.find({ pollId: poll._id }).select('voterEmail isUsed votedAt verifiedAt')
+    ]);
+
+    const authMap = {};
+    authorizations.forEach((auth) => {
+      authMap[auth.voterEmail.toLowerCase().trim()] = auth;
+    });
+
+    const participantsMap = {};
+
+    // Add all pre-registered electorate members
+    electorateEntries.forEach((entry) => {
+      const email = entry.email.toLowerCase().trim();
+      const auth = authMap[email];
+      participantsMap[email] = {
+        _id: entry._id,
+        email,
+        invitedAt: entry.invitedAt,
+        invitationToken: entry.invitationToken,
+        hasVoted: auth ? Boolean(auth.isUsed) : false,
+        votedAt: auth ? auth.votedAt : null
+      };
+    });
+
+    // Also include any voters who authorized/voted in open polls
+    authorizations.forEach((auth) => {
+      const email = auth.voterEmail.toLowerCase().trim();
+      if (!participantsMap[email]) {
+        participantsMap[email] = {
+          _id: auth._id,
+          email,
+          invitedAt: auth.verifiedAt || auth.createdAt,
+          hasVoted: Boolean(auth.isUsed),
+          votedAt: auth.votedAt
+        };
+      }
+    });
+
+    const unifiedParticipants = Object.values(participantsMap);
+    const totalEligibleCount = Math.max(poll.totalEligibleCount || 0, unifiedParticipants.length);
 
     res.json({
       poll: {
         ...poll.toObject(),
         options: reconstructedOptions,
-        totalVotes
+        totalVotes,
+        totalEligibleCount
       },
-      electorate: electorateEntries
+      electorate: unifiedParticipants
     });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch poll details.', error: err.message });
@@ -387,3 +437,40 @@ exports.archivePoll = async (req, res) => {
     res.status(500).json({ message: 'Failed to archive poll.', error: err.message });
   }
 };
+
+// Get Audit Logs for a specific Poll
+exports.getPollAuditLogs = async (req, res) => {
+  try {
+    const poll = await Poll.findById(req.params.id);
+    if (!poll) return res.status(404).json({ message: 'Poll not found.' });
+
+    if (req.user.role !== 'admin' && poll.organizerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    const logs = await AuditEvent.find({ pollId: poll._id }).sort({ timestamp: -1 });
+    res.json({ logs });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch poll audit logs.', error: err.message });
+  }
+};
+
+// Get All Audit Logs for Organizer's Polls & Activity
+exports.getOrganizerAuditLogs = async (req, res) => {
+  try {
+    const organizerPolls = await Poll.find({ organizerId: req.user._id }).select('_id');
+    const pollIds = organizerPolls.map((p) => p._id);
+
+    const logs = await AuditEvent.find({
+      $or: [
+        { pollId: { $in: pollIds } },
+        { actorEmail: req.user.email }
+      ]
+    }).sort({ timestamp: -1 }).limit(200);
+
+    res.json({ logs });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch organizer audit logs.', error: err.message });
+  }
+};
+

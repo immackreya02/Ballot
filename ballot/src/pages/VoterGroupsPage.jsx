@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { voterGroupAPI } from '../services/api';
 import { Button, PageHeader, ConfirmModal, useToast, State } from '../components/UI';
-import { Users, Plus, Edit3, Trash2, Mail, CheckCircle2, FileText } from 'lucide-react';
+import { parseAndValidateEmailInput } from '../services/emailValidator';
+import { Users, Plus, Edit3, Trash2, Mail, CheckCircle2, AlertTriangle, FileText } from 'lucide-react';
 
 export function VoterGroupsPage() {
   const { showToast } = useToast();
@@ -56,19 +57,25 @@ export function VoterGroupsPage() {
       return;
     }
 
+    const emailAnalysis = parseAndValidateEmailInput(rawEmails);
+    if (emailAnalysis.valid.length === 0) {
+      showToast('Please provide at least one valid voter email address.', 'error');
+      return;
+    }
+
     try {
       if (editGroup) {
         await voterGroupAPI.update(editGroup._id, {
           name: name.trim(),
           description,
-          emails: rawEmails
+          emails: emailAnalysis.valid.join('\n')
         });
         showToast('Voter group updated successfully!');
       } else {
         await voterGroupAPI.create({
           name: name.trim(),
           description,
-          emails: rawEmails
+          emails: emailAnalysis.valid.join('\n')
         });
         showToast('Voter group created successfully!');
       }
@@ -91,10 +98,11 @@ export function VoterGroupsPage() {
     }
   };
 
-  // Helper count for instant UI preview
-  const parsedCount = rawEmails
-    ? [...new Set(rawEmails.split(/[\n,;]/).map((e) => e.trim().toLowerCase()).filter((e) => e.includes('@')))].length
-    : 0;
+  // Live email analysis for preview
+  const emailAnalysis = useMemo(() => {
+    return parseAndValidateEmailInput(rawEmails);
+  }, [rawEmails]);
+  const parsedCount = emailAnalysis.totalCount;
 
   return (
     <section className="space-y-6">
@@ -197,17 +205,75 @@ export function VoterGroupsPage() {
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="label">Eligible Voter Email Addresses</label>
-              <span className="font-mono text-xs text-terra font-bold">{parsedCount} valid unique emails</span>
+              <span className="font-mono text-xs text-muted">
+                {parsedCount} valid unique email{parsedCount === 1 ? '' : 's'}
+              </span>
             </div>
             <textarea
-              className="field font-mono text-xs min-h-32"
-              placeholder="Paste or type email addresses separated by line breaks or commas…&#10;person1@gmail.com&#10;person2@gmail.com"
+              className="field font-mono text-xs min-h-28"
+              placeholder="Paste or type email addresses separated by line breaks, commas, or spaces…&#10;person1@gmail.com&#10;person2@gmail.com"
               value={rawEmails}
               onChange={(e) => setRawEmails(e.target.value)}
             />
-            <p className="mt-1 text-[11px] text-muted">
-              Emails will be automatically normalized and deduplicated upon saving.
-            </p>
+
+            {rawEmails.trim() && (
+              <div className="mt-3 space-y-2 animate-in fade-in">
+                {/* Live Parser Analysis Summary */}
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-muted">Live Parser Analysis:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-olive font-bold flex items-center gap-1">
+                      <CheckCircle2 size={13} /> {emailAnalysis.valid.length} Valid
+                    </span>
+                    {emailAnalysis.invalid.length > 0 && (
+                      <span className="text-terra font-bold flex items-center gap-1">
+                        <AlertTriangle size={13} /> {emailAnalysis.invalid.length} Malformed
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Warning Banner for Malformed Entries */}
+                {emailAnalysis.invalid.length > 0 && (
+                  <div className="rounded-xl border border-terra/30 bg-terra/10 p-2.5 text-xs text-terra space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-[11px]">
+                      <AlertTriangle size={13} className="shrink-0" />
+                      <span>Malformed email syntax detected (will be ignored):</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {emailAnalysis.invalid.map((bad, i) => (
+                        <span
+                          key={i}
+                          className="font-mono bg-paper border border-terra/30 text-terra px-2 py-0.5 rounded text-[11px]"
+                        >
+                          {bad}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Valid Email Chips Preview */}
+                {emailAnalysis.valid.length > 0 && (
+                  <div className="rounded-xl border border-line bg-paper p-3 text-xs space-y-1.5">
+                    <div className="text-[11px] font-mono text-muted uppercase font-bold flex justify-between">
+                      <span>Verified Group Members ({emailAnalysis.valid.length}):</span>
+                      <span className="text-olive text-[10px]">Auto-Separated &amp; Deduplicated</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pt-1">
+                      {emailAnalysis.valid.map((validEmail, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 rounded-full border border-olive/30 bg-olive/10 px-2.5 py-0.5 font-mono text-[11px] text-olive font-medium"
+                        >
+                          <CheckCircle2 size={11} /> {validEmail}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </form>
       </ConfirmModal>

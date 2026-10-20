@@ -60,7 +60,7 @@ export function Landing() {
     {
       step: '03',
       title: 'Anonymous Single Vote & Live Tally',
-      description: 'Atomic MongoDB locks guarantee one vote per person. Votes are stored decoupled from identity with live Socket.io tallies.',
+      description: 'Single-ballot verification guarantees one vote per person. Ballots are stored decoupled from voter identity with instant real-time results.',
       icon: <CheckCircle2 className="text-terra" size={24} />
     }
   ];
@@ -211,17 +211,17 @@ export function Landing() {
               <h3 className="font-serif text-xl text-ink">Secret Ballot Privacy</h3>
             </div>
             <p className="text-sm text-muted leading-relaxed">
-              Voter authorization records and anonymous ballots are stored in separate MongoDB collections. No database link exists connecting a voter email to candidate selection.
+              Voter authorization records and anonymous ballots are stored in separate, isolated data structures. No connection exists between a voter's email and their candidate selection.
             </p>
           </div>
 
           <div className="card p-6 md:p-8 space-y-3">
             <div className="flex items-center gap-2 text-terra">
               <LockKeyhole size={24} />
-              <h3 className="font-serif text-xl text-ink">Atomic Concurrency Lock</h3>
+              <h3 className="font-serif text-xl text-ink">Tamper-Proof Single Voting</h3>
             </div>
             <p className="text-sm text-muted leading-relaxed">
-              Atomic state updates (`isUsed: true`) guarantee that concurrent parallel vote attempts from the same delegate result in exactly one accepted vote.
+              Strict one-time verification tokens guarantee that parallel or duplicate vote attempts from the same delegate are immediately blocked.
             </p>
           </div>
 

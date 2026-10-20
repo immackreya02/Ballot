@@ -215,14 +215,18 @@ export function PollList({ mode = 'all' }) {
       ) : filteredList.length ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredList.map((p) => {
+            const computedVotes = p.totalVotes !== undefined && p.totalVotes !== null
+              ? p.totalVotes
+              : (p.options ? p.options.reduce((sum, o) => sum + (o.voteCount || 0), 0) : 0);
+
             const mappedPoll = {
               id: p._id,
               question: p.title,
               status: p.status,
-              votes: p.totalVotes || 0,
+              votes: computedVotes,
               owner: p.organizerName,
               closes: p.endAt ? new Date(p.endAt).toLocaleString() : 'No end date',
-              options: p.options ? p.options.map((o) => [o.optionText, o.voteCount]) : []
+              options: p.options ? p.options.map((o) => [o.optionText, o.voteCount || 0]) : []
             };
             return (
               <PollCard

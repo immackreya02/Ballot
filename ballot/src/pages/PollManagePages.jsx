@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   Clock,
   Lock,
-  Vote
+  Vote,
+  Shield
 } from 'lucide-react';
 
 export function PollDetails() {
@@ -100,33 +101,60 @@ export function PollDetails() {
     return <SystemState type="notfound" />;
   }
 
-  const isOwner = user?.role === 'admin' || user?.id === poll.organizerId;
+  const isOrganizer = user?.id === poll.organizerId;
+  const isAdmin = user?.role === 'admin';
+  const isOwner = isOrganizer || isAdmin;
   const pollVoterUrl = `${window.location.origin}/vote?code=${poll.pollCode}`;
+
+  const totalBallots = poll.totalVotes !== undefined && poll.totalVotes !== null
+    ? poll.totalVotes
+    : (poll.options ? poll.options.reduce((sum, o) => sum + (o.voteCount || 0), 0) : 0);
 
   return (
     <>
       <PageHeader eyebrow={`Poll Code: ${poll.pollCode}`} title={poll.title}>
-        {isOwner && poll.status === 'DRAFT' && (
+        {isOrganizer && poll.status === 'DRAFT' && (
           <Button variant="secondary" onClick={() => nav(`/app/polls/${poll._id}/edit`)}>
             <Edit3 size={16} />
             Edit Poll
           </Button>
         )}
-        {isOwner && poll.status === 'DRAFT' && (
+        {isOrganizer && poll.status === 'DRAFT' && (
           <Button onClick={() => setPublishModal(true)}>
             <CheckCircle2 size={16} />
             Publish Poll
           </Button>
         )}
-        <Button variant={poll.status === 'DRAFT' ? 'secondary' : 'primary'} onClick={() => nav(`/app/polls/${poll._id}/share`)}>
-          <Share2 size={16} />
-          Share & Invitations
-        </Button>
+        {isOrganizer && (
+          <Button variant={poll.status === 'DRAFT' ? 'secondary' : 'primary'} onClick={() => nav(`/app/polls/${poll._id}/share`)}>
+            <Share2 size={16} />
+            Share & Invitations
+          </Button>
+        )}
+        {isAdmin && !isOrganizer && (
+          <Button variant="secondary" onClick={() => nav('/app/admin/polls')}>
+            ← Back to Admin Panel
+          </Button>
+        )}
       </PageHeader>
 
       <PollManagementNavigation pollId={poll._id} />
 
-      {poll.status === 'DRAFT' && isOwner && (
+      {isAdmin && !isOrganizer && (
+        <div className="rounded-2xl border border-line bg-warm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Shield size={18} className="text-terra shrink-0" />
+            <span className="text-xs text-muted">
+              <b className="text-ink">Admin Inspection Mode:</b> You are auditing this poll created by <span className="font-mono text-ink font-semibold">{poll.organizerName}</span> ({poll.organizerEmail || 'Organizer'}).
+            </span>
+          </div>
+          <Button variant="secondary" className="text-xs shrink-0 py-1" onClick={() => nav('/app/admin/polls')}>
+            Return to Admin Center
+          </Button>
+        </div>
+      )}
+
+      {poll.status === 'DRAFT' && isOrganizer && (
         <div className="rounded-2xl border-2 border-line bg-warm p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 shadow-sm">
           <div className="flex items-center gap-3.5">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-paper border border-line text-terra shrink-0">
@@ -172,7 +200,7 @@ export function PollDetails() {
             <div>
               <div className="label">Total Participation</div>
               <div className="mt-1 font-mono text-3xl font-bold text-ink">
-                {poll.totalVotes ? poll.totalVotes.toLocaleString() : 0}
+                {totalBallots.toLocaleString()}
               </div>
               <div className="text-xs text-muted">authoritative ballots</div>
             </div>
@@ -200,7 +228,7 @@ export function PollDetails() {
             
             <div className="space-y-4">
               {poll.options.map((opt) => {
-                const pct = poll.totalVotes > 0 ? Number((opt.voteCount / poll.totalVotes * 100).toFixed(1)) : 0;
+                const pct = totalBallots > 0 ? Number((opt.voteCount / totalBallots * 100).toFixed(1)) : 0;
                 return (
                   <div key={opt._id}>
                     <div className="flex justify-between text-sm mb-1">
@@ -215,13 +243,75 @@ export function PollDetails() {
               })}
             </div>
           </div>
+
+          <div className="border-t border-line pt-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-serif text-2xl">Voter Turnout & Attendance</h3>
+                <p className="text-xs text-muted">Audited voter participation roster.</p>
+              </div>
+              <Link to={`/app/polls/${poll._id}/participants`} className="text-xs font-bold text-terra hover:underline">
+                View all participants ({electorate.length}) →
+              </Link>
+            </div>
+
+            {electorate.length > 0 ? (
+              <div className="space-y-2.5">
+                {electorate.slice(0, 5).map((entry) => (
+                  <div
+                    key={entry._id || entry.email}
+                    className="flex items-center justify-between p-3 rounded-xl border border-line bg-paper text-xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`h-6 w-6 rounded-full font-mono text-[10px] grid place-items-center font-bold border ${
+                        entry.hasVoted ? 'bg-olive/20 text-olive border-olive/30' : 'bg-warm text-muted border-line'
+                      }`}>
+                        {entry.email.substring(0, 2).toUpperCase()}
+                      </div>
+                      <span className="font-mono font-bold text-ink">{entry.email}</span>
+                    </div>
+
+                    <div>
+                      {entry.hasVoted ? (
+                        <div className="text-right">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold font-mono text-[11px] bg-olive/15 text-olive border border-olive/30">
+                            <CheckCircle2 size={12} /> Voted
+                          </span>
+                          {entry.votedAt && (
+                            <span className="block text-[10px] text-muted font-mono mt-0.5">
+                              {new Date(entry.votedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-[11px] bg-warm text-muted border border-line">
+                          <Clock size={12} /> Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {electorate.length > 5 && (
+                  <div className="text-center pt-1">
+                    <Link to={`/app/polls/${poll._id}/participants`} className="text-xs font-bold text-muted hover:text-ink underline font-mono">
+                      + {electorate.length - 5} more participants
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-line bg-paper p-4 text-center text-xs text-muted font-mono">
+                No participant records found for this poll yet.
+              </div>
+            )}
+          </div>
         </div>
 
         <aside className="card h-fit p-6 space-y-6">
           <h2 className="font-serif text-2xl">Poll Actions</h2>
 
           <div className="grid gap-3">
-            {isOwner && poll.status === 'DRAFT' && (
+            {isOrganizer && poll.status === 'DRAFT' && (
               <>
                 <Button onClick={() => nav(`/app/polls/${poll._id}/edit`)}>
                   <Edit3 size={16} />
@@ -241,10 +331,17 @@ export function PollDetails() {
               <BarChart3 size={16} />
               Live Results
             </Button>
-            <Button variant="secondary" onClick={() => nav(`/app/polls/${poll._id}/share`)}>
-              <Share2 size={16} />
-              Share & Invitations
-            </Button>
+            {isOrganizer && (
+              <Button variant="secondary" onClick={() => nav(`/app/polls/${poll._id}/share`)}>
+                <Share2 size={16} />
+                Share & Invitations
+              </Button>
+            )}
+            {isAdmin && !isOrganizer && (
+              <Button variant="secondary" onClick={() => nav('/app/admin/polls')}>
+                ← System Polls List
+              </Button>
+            )}
 
             {isOwner && poll.status === 'OPEN' && (
               <Button variant="secondary" onClick={() => setCloseModal(true)}>
