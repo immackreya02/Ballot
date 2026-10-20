@@ -40,6 +40,7 @@ export function PollDetails() {
 
   const [closeModal, setCloseModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
+  const [publishModal, setPublishModal] = useState(false);
 
   const loadPoll = async () => {
     setLoading(true);
@@ -57,6 +58,17 @@ export function PollDetails() {
   useEffect(() => {
     loadPoll();
   }, [id]);
+
+  const handlePublishPoll = async () => {
+    try {
+      const pubRes = await pollAPI.publish(poll._id);
+      setPublishModal(false);
+      showToast(`Poll Published! Code: ${pubRes.poll.pollCode}`);
+      loadPoll();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
 
   const handleClosePoll = async () => {
     try {
@@ -94,13 +106,51 @@ export function PollDetails() {
   return (
     <>
       <PageHeader eyebrow={`Poll Code: ${poll.pollCode}`} title={poll.title}>
-        <Button onClick={() => nav(`/app/polls/${poll._id}/share`)}>
+        {isOwner && poll.status === 'DRAFT' && (
+          <Button variant="secondary" onClick={() => nav(`/app/polls/${poll._id}/edit`)}>
+            <Edit3 size={16} />
+            Edit Poll
+          </Button>
+        )}
+        {isOwner && poll.status === 'DRAFT' && (
+          <Button onClick={() => setPublishModal(true)}>
+            <CheckCircle2 size={16} />
+            Publish Poll
+          </Button>
+        )}
+        <Button variant={poll.status === 'DRAFT' ? 'secondary' : 'primary'} onClick={() => nav(`/app/polls/${poll._id}/share`)}>
           <Share2 size={16} />
           Share & Invitations
         </Button>
       </PageHeader>
 
       <PollManagementNavigation pollId={poll._id} />
+
+      {poll.status === 'DRAFT' && isOwner && (
+        <div className="rounded-2xl border-2 border-line bg-warm p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-paper border border-line text-terra shrink-0">
+              <Edit3 size={20} />
+            </div>
+            <div>
+              <div className="font-bold text-base text-ink">Draft Mode — Voting Not Started</div>
+              <div className="text-xs text-muted mt-0.5">
+                You can edit the question, candidate options, and electorate roster before publishing this poll.
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <Button variant="secondary" className="flex-1 sm:flex-initial" onClick={() => nav(`/app/polls/${poll._id}/edit`)}>
+              <Edit3 size={15} />
+              Edit Poll Draft
+            </Button>
+            <Button className="flex-1 sm:flex-initial" onClick={() => setPublishModal(true)}>
+              <CheckCircle2 size={15} />
+              Publish Now
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_.65fr]">
         <div className="card p-6 space-y-6">
@@ -171,7 +221,23 @@ export function PollDetails() {
           <h2 className="font-serif text-2xl">Poll Actions</h2>
 
           <div className="grid gap-3">
-            <Button onClick={() => nav(`/app/polls/${poll._id}/results`)}>
+            {isOwner && poll.status === 'DRAFT' && (
+              <>
+                <Button onClick={() => nav(`/app/polls/${poll._id}/edit`)}>
+                  <Edit3 size={16} />
+                  Edit Draft Poll
+                </Button>
+                <Button
+                  className="bg-terra text-white hover:bg-terra/90"
+                  onClick={() => setPublishModal(true)}
+                >
+                  <CheckCircle2 size={16} />
+                  Publish Poll
+                </Button>
+              </>
+            )}
+
+            <Button variant="secondary" onClick={() => nav(`/app/polls/${poll._id}/results`)}>
               <BarChart3 size={16} />
               Live Results
             </Button>
@@ -205,6 +271,16 @@ export function PollDetails() {
           </div>
         </aside>
       </div>
+
+      <ConfirmModal
+        open={publishModal}
+        title="Publish this poll now?"
+        onClose={() => setPublishModal(false)}
+        onConfirm={handlePublishPoll}
+        confirm="Publish Poll Now"
+      >
+        Publishing this poll will lock the electorate roster and allow eligible voters to begin casting their ballots.
+      </ConfirmModal>
 
       <ConfirmModal
         open={closeModal}

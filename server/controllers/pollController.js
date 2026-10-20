@@ -85,6 +85,16 @@ exports.createPoll = async (req, res) => {
 
     await newPoll.save();
 
+    if (eligibleEmails.length > 0) {
+      const electorateDocs = eligibleEmails.map((email) => ({
+        pollId: newPoll._id,
+        email,
+        invitationToken: generateInvitationToken(),
+        invitedAt: new Date()
+      }));
+      await ElectorateEntry.insertMany(electorateDocs);
+    }
+
     await AuditEvent.create({
       eventType: 'POLL_CREATED',
       pollId: newPoll._id,
@@ -212,6 +222,17 @@ exports.updatePoll = async (req, res) => {
       eligibleEmails = normalizeEmailList(specificEmails);
     }
 
+    if (eligibleEmails.length > 0) {
+      await ElectorateEntry.deleteMany({ pollId: poll._id });
+      const electorateDocs = eligibleEmails.map((email) => ({
+        pollId: poll._id,
+        email,
+        invitationToken: generateInvitationToken(),
+        invitedAt: new Date()
+      }));
+      await ElectorateEntry.insertMany(electorateDocs);
+    }
+
     poll.totalEligibleCount = eligibleEmails.length;
     await poll.save();
 
@@ -244,6 +265,12 @@ exports.publishPoll = async (req, res) => {
       if (group) emailsToInvite = group.emails;
     } else if (specificEmails) {
       emailsToInvite = normalizeEmailList(specificEmails);
+    } else {
+      // Check existing draft electorate entries
+      const existingDraftEntries = await ElectorateEntry.find({ pollId: poll._id });
+      if (existingDraftEntries.length > 0) {
+        emailsToInvite = existingDraftEntries.map((e) => e.email);
+      }
     }
 
     if (emailsToInvite.length === 0) {

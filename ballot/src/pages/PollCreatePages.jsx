@@ -23,13 +23,21 @@ export function CreatePoll({ edit = false }) {
   const { showToast } = useToast();
   const { user } = useAuth();
 
-  const [question, setQuestion] = useState('Which project should receive the Q3 community grant?');
+  const isEdit = Boolean(edit && id);
+
+  const [question, setQuestion] = useState(
+    isEdit ? '' : 'Which project should receive the Q3 community grant?'
+  );
   const [description, setDescription] = useState('');
-  const [options, setOptions] = useState([
-    'Solar Panel Installation on Community Center',
-    'Park Bench & Landscaping Renovation',
-    'Public Wi-Fi Expansion'
-  ]);
+  const [options, setOptions] = useState(
+    isEdit
+      ? ['', '']
+      : [
+          'Solar Panel Installation on Community Center',
+          'Park Bench & Landscaping Renovation',
+          'Public Wi-Fi Expansion'
+        ]
+  );
   const [resultVisibility, setResultVisibility] = useState('LIVE');
   const [electorateSourceType, setElectorateSourceType] = useState('SPECIFIC');
   const [voterGroupId, setVoterGroupId] = useState('');
@@ -45,7 +53,7 @@ export function CreatePoll({ edit = false }) {
       try {
         const res = await voterGroupAPI.getAll();
         setVoterGroups(res.groups || []);
-        if (res.groups && res.groups.length > 0) {
+        if (!isEdit && res.groups && res.groups.length > 0) {
           setVoterGroupId(res.groups[0]._id);
         }
       } catch (err) {
@@ -53,7 +61,42 @@ export function CreatePoll({ edit = false }) {
       }
     }
     loadGroups();
-  }, []);
+  }, [isEdit]);
+
+  // Load existing poll details if in edit mode
+  useEffect(() => {
+    if (isEdit && id) {
+      async function loadExistingPoll() {
+        setLoading(true);
+        try {
+          const res = await pollAPI.getById(id);
+          const p = res.poll;
+          setQuestion(p.title || '');
+          setDescription(p.description || '');
+          if (p.options && p.options.length > 0) {
+            setOptions(p.options.map((o) => (typeof o === 'string' ? o : o.optionText)));
+          }
+          if (p.resultVisibility) {
+            setResultVisibility(p.resultVisibility);
+          }
+          if (p.electorateSourceType) {
+            setElectorateSourceType(p.electorateSourceType);
+          }
+          if (p.voterGroupId) {
+            setVoterGroupId(p.voterGroupId);
+          }
+          if (res.electorate && res.electorate.length > 0) {
+            setSpecificEmails(res.electorate.map((e) => e.email).join('\n'));
+          }
+        } catch (err) {
+          showToast(err.message || 'Failed to load poll for editing', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+      loadExistingPoll();
+    }
+  }, [isEdit, id]);
 
   const addOption = () => {
     if (options.length >= 10) {
@@ -102,7 +145,7 @@ export function CreatePoll({ edit = false }) {
 
     setLoading(true);
     try {
-      const res = await pollAPI.create({
+      const payload = {
         title: question.trim(),
         description: description.trim(),
         options: validOptions,
@@ -110,9 +153,17 @@ export function CreatePoll({ edit = false }) {
         electorateSourceType,
         voterGroupId: electorateSourceType === 'GROUP' ? voterGroupId : undefined,
         specificEmails: electorateSourceType === 'SPECIFIC' ? specificEmails : undefined
-      });
-      showToast('Poll draft created successfully!');
-      nav('/app/polls/drafts');
+      };
+
+      if (isEdit) {
+        await pollAPI.update(id, payload);
+        showToast('Poll draft updated successfully!');
+        nav(`/app/polls/${id}`);
+      } else {
+        await pollAPI.create(payload);
+        showToast('Poll draft created successfully!');
+        nav('/app/polls/drafts');
+      }
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -133,8 +184,7 @@ export function CreatePoll({ edit = false }) {
 
     setLoading(true);
     try {
-      // 1. Create draft
-      const draftRes = await pollAPI.create({
+      const payload = {
         title: question.trim(),
         description: description.trim(),
         options: validOptions,
@@ -142,10 +192,18 @@ export function CreatePoll({ edit = false }) {
         electorateSourceType,
         voterGroupId: electorateSourceType === 'GROUP' ? voterGroupId : undefined,
         specificEmails: electorateSourceType === 'SPECIFIC' ? specificEmails : undefined
-      });
+      };
 
-      // 2. Publish draft (locks electorate & generates pollCode)
-      const pubRes = await pollAPI.publish(draftRes.poll._id, {
+      let targetPollId = id;
+      if (isEdit) {
+        await pollAPI.update(id, payload);
+      } else {
+        const draftRes = await pollAPI.create(payload);
+        targetPollId = draftRes.poll._id;
+      }
+
+      // Publish draft (locks electorate & generates pollCode)
+      const pubRes = await pollAPI.publish(targetPollId, {
         specificEmails: electorateSourceType === 'SPECIFIC' ? specificEmails : undefined
       });
 
@@ -161,7 +219,10 @@ export function CreatePoll({ edit = false }) {
 
   return (
     <>
-      <PageHeader eyebrow="New Poll Wizard" title="Configure Poll & Electorate" />
+      <PageHeader
+        eyebrow={isEdit ? 'Draft Edit Mode' : 'New Poll Wizard'}
+        title={isEdit ? 'Edit Poll & Electorate' : 'Configure Poll & Electorate'}
+      />
 
       <div className="grid gap-8 xl:grid-cols-[1.15fr_.85fr]">
         <div className="card p-6 md:p-8 space-y-7">
@@ -338,10 +399,10 @@ export function CreatePoll({ edit = false }) {
 
           <div className="flex flex-wrap gap-3 border-t border-line pt-6">
             <Button variant="secondary" onClick={handleSaveDraft} disabled={loading}>
-              <Save size={16} /> Save Draft
+              <Save size={16} /> {isEdit ? 'Update Draft' : 'Save Draft'}
             </Button>
             <Button onClick={() => setModal(true)} disabled={loading}>
-              Publish Poll Now
+              {isEdit ? 'Update & Publish Now' : 'Publish Poll Now'}
             </Button>
           </div>
         </div>
@@ -381,12 +442,12 @@ export function CreatePoll({ edit = false }) {
 
       <ConfirmModal
         open={modal}
-        title="Publish Poll & Lock Electorate?"
+        title={isEdit ? 'Update & Publish Poll?' : 'Publish Poll & Lock Electorate?'}
         onClose={() => setModal(false)}
         onConfirm={handlePublish}
-        confirm="Publish Poll Now"
+        confirm={isEdit ? 'Update & Publish Now' : 'Publish Poll Now'}
       >
-        You are about to publish <b>"{question}"</b> to <b>{calculatePreviewCount()} eligible voters</b>. Once published, a unique Poll Code will be generated and the electorate list will be locked.
+        You are about to publish <b>"{question}"</b> to <b>{calculatePreviewCount()} eligible voters</b>. Once published, the electorate list will be locked and voting will begin.
       </ConfirmModal>
     </>
   );

@@ -228,7 +228,7 @@ export function PollList({ mode = 'all' }) {
               <PollCard
                 key={p._id}
                 poll={mappedPoll}
-                onOpen={() => nav(`/app/polls/${p._id}`)}
+                onOpen={() => nav(p.status === 'DRAFT' ? `/app/polls/${p._id}/edit` : `/app/polls/${p._id}`)}
               />
             );
           })}
