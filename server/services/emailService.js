@@ -1,68 +1,39 @@
 const nodemailer = require('nodemailer');
 
 const getTransporter = () => {
-  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-    const user = process.env.SMTP_USER.trim();
-    const pass = process.env.SMTP_PASS.replace(/\s+/g, '');
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
 
-    // For Gmail, use direct SSL port 465 with robust cloud timeouts
-    if (process.env.SMTP_SERVICE === 'gmail' || process.env.SMTP_HOST === 'smtp.gmail.com' || user.endsWith('@gmail.com')) {
-      return nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: { user, pass },
-        connectionTimeout: 15000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000
-      });
-    }
-
-    if (process.env.SMTP_HOST) {
-      return nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: { user, pass },
-        connectionTimeout: 15000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000
-      });
-    }
+  if (user && pass) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user,
+        pass
+      }
+    });
   }
   return null;
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
-  const defaultFrom = process.env.SMTP_USER
-    ? `"BALLOT Platform" <${process.env.SMTP_USER.trim()}>`
-    : '"BALLOT Platform" <noreply@ballot-voting.org>';
-  const from = process.env.SMTP_FROM || defaultFrom;
+  const user = (process.env.SMTP_USER || '').trim();
+  const from = process.env.SMTP_FROM || (user ? `"BALLOT Platform" <${user}>` : '"BALLOT Platform" <noreply@ballot.org>');
   const transporter = getTransporter();
 
-  if (transporter) {
-    try {
-      const sendPromise = transporter.sendMail({ from, to, subject, text, html });
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('SMTP send timed out after 15 seconds')), 15000)
-      );
-
-      const info = await Promise.race([sendPromise, timeoutPromise]);
-      console.log(`[Email Service] Sent email to ${to} (MessageID: ${info.messageId})`);
-      return { success: true, messageId: info.messageId };
-    } catch (err) {
-      console.error(`[Email Service] SMTP error sending to ${to}:`, err.message);
-    }
+  if (!transporter) {
+    console.error('[Email Service] Error: SMTP_USER or SMTP_PASS not set in environment!');
+    throw new Error('SMTP credentials (SMTP_USER / SMTP_PASS) not configured on server.');
   }
 
-  // Fallback console log when SMTP times out or is unconfigured
-  console.log(`\n==================================================`);
-  console.log(`[EMAIL DISPATCH NOTICE] To: ${to}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`Text Body:\n${text}`);
-  console.log(`==================================================\n`);
-
-  return { success: true, devMode: true };
+  try {
+    const info = await transporter.sendMail({ from, to, subject, text, html });
+    console.log(`[Email Service] Sent email to ${to} (MessageID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error(`[Email Service] SMTP error sending to ${to}:`, err.message);
+    throw err;
+  }
 };
 
 // 1. Organizer Registration OTP

@@ -66,12 +66,8 @@ exports.register = async (req, res) => {
       metadata: { role: userRole }
     });
 
-    // Send real email or log in dev mode safely without blocking response
-    try {
-      await emailService.sendOrganizerRegistrationOTP(normalizedEmail, otp);
-    } catch (emailErr) {
-      console.error('[Registration] Email dispatch failed:', emailErr.message);
-    }
+    // Send real email OTP via Gmail SMTP
+    await emailService.sendOrganizerRegistrationOTP(normalizedEmail, otp);
 
     res.status(201).json({
       message: 'Account created successfully. Please verify your email using the 6-digit OTP sent to your inbox.',

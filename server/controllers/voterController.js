@@ -160,12 +160,8 @@ exports.checkEligibilityAndSendOTP = async (req, res) => {
       actorEmail: normalizedEmail
     });
 
-    // Send real email or log in dev mode safely without blocking response
-    try {
-      await emailService.sendVoterOTP(normalizedEmail, poll.title, otp);
-    } catch (emailErr) {
-      console.error('[Voter OTP] Email dispatch failed:', emailErr.message);
-    }
+    // Send real voter OTP email via Gmail SMTP
+    await emailService.sendVoterOTP(normalizedEmail, poll.title, otp);
 
     res.json({
       message: 'Verification OTP sent to your email address. Valid for 5 minutes.',
