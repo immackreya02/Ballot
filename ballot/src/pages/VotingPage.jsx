@@ -76,9 +76,7 @@ export function VotingPage() {
         email: email.trim()
       });
       showToast(res.message);
-      if (res.devOtpHint) {
-        setOtp(res.devOtpHint); // Auto fill OTP in dev mode for convenient testing
-      }
+      setOtp(''); // Always require manual OTP entry from voter
       setStep(2);
     } catch (err) {
       if (err.message.includes('already cast your vote')) {
@@ -266,9 +264,10 @@ export function VotingPage() {
                 required
                 maxLength={6}
                 className="field text-center font-mono text-3xl tracking-[.4em] py-3 uppercase"
-                placeholder="123456"
+                placeholder="------"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                autoFocus
               />
             </div>
 
