@@ -52,6 +52,15 @@ export function VotingPage() {
         if (data.prefilledEmail) {
           setEmail(data.prefilledEmail);
         }
+        // If poll is CLOSED or resultVisibility is LIVE, load results immediately
+        if (data.poll.status === 'CLOSED' || data.poll.resultVisibility === 'LIVE') {
+          try {
+            const res = await voterAPI.getResults(data.poll.id);
+            setResultsData(res);
+          } catch (e) {
+            // ignore if restricted
+          }
+        }
       } catch (err) {
         setErrorMsg(err.message || 'Poll not found or invalid access token.');
       } finally {
@@ -218,9 +227,77 @@ export function VotingPage() {
           </div>
         )}
 
-        {/* STEP 1: EMAIL ELIGIBILITY CHECK */}
-        {step === 1 && (
-          <form onSubmit={handleCheckEligibility} className="border-t border-line pt-6 space-y-5 animate-in fade-in">
+        {/* CLOSED POLL AUTOMATIC RESULTS VIEW */}
+        {pollInfo?.status === 'CLOSED' ? (
+          <div className="border-t border-line pt-6 space-y-6 animate-in fade-in">
+            <div className="rounded-xl border border-line bg-paper p-5 text-center space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono bg-warm text-ink border border-line">
+                Poll Closed
+              </span>
+              <h3 className="font-serif text-2xl font-bold">Official Verified Results</h3>
+              <p className="text-xs text-muted">Voting for this poll has concluded. Final results are displayed below.</p>
+            </div>
+
+            {resultsData && resultsData.tallies ? (
+              <div className="card text-left p-6 bg-warm border border-line space-y-4">
+                <div className="flex justify-between items-center border-b border-line pb-2">
+                  <span className="font-serif font-bold text-lg">Final Standings</span>
+                  <span className="font-mono text-xs text-muted">{resultsData.totalVotes} total votes</span>
+                </div>
+                <div className="space-y-4">
+                  {resultsData.tallies.map((t) => (
+                    <div key={t.id}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{t.optionText}</span>
+                        <span className="font-mono font-bold">{t.pct}% ({t.votes} votes)</span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-paper">
+                        <div className="h-full bg-ink transition-all duration-500" style={{ width: `${t.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="card p-6 text-center text-xs font-mono text-muted">
+                Finalizing official results tally…
+              </div>
+            )}
+
+            <Button variant="secondary" onClick={() => navigate('/')} className="w-full">
+              Return to Public Portal
+            </Button>
+          </div>
+        ) : (
+          <>
+            {/* OPTION 1 (LIVE): LIVE STANDINGS CARD VISIBLE WHILE VOTING OCCURS */}
+            {pollInfo?.resultVisibility === 'LIVE' && resultsData?.tallies && step < 4 && (
+              <div className="rounded-xl border border-line bg-warm/80 p-4 space-y-3 animate-in fade-in">
+                <div className="flex justify-between items-center border-b border-line pb-2">
+                  <span className="font-mono text-xs font-bold text-ink uppercase tracking-wide flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-olive animate-pulse" /> Live Standings (Public)
+                  </span>
+                  <span className="font-mono text-[11px] text-muted">{resultsData.totalVotes || 0} votes recorded</span>
+                </div>
+                <div className="space-y-2.5">
+                  {resultsData.tallies.map((t) => (
+                    <div key={t.id} className="text-xs">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-medium text-ink">{t.optionText}</span>
+                        <span className="font-mono text-muted">{t.pct}% ({t.votes})</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-paper border border-line">
+                        <div className="h-full bg-ink transition-all duration-500" style={{ width: `${t.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 1: EMAIL ELIGIBILITY CHECK */}
+            {step === 1 && (
+              <form onSubmit={handleCheckEligibility} className="border-t border-line pt-6 space-y-5 animate-in fade-in">
             <div className="rounded-xl border border-line bg-paper p-4 text-xs text-muted leading-relaxed">
               <b className="text-ink block font-semibold mb-1">Restricted Poll Verification:</b>
               Only voter emails authorized by the organizer are eligible. Your email will be checked against the poll's electorate before an OTP is sent.
@@ -380,6 +457,8 @@ export function VotingPage() {
               Return to Public Portal
             </Button>
           </div>
+        )}
+          </>
         )}
       </div>
     </section>
